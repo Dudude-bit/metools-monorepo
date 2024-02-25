@@ -9,7 +9,6 @@ mod models;
 mod controllers;
 mod schema;
 mod utils;
-mod utils;
 
 type DBPool = r2d2::Pool<r2d2::ConnectionManager<PgConnection>>;
 
