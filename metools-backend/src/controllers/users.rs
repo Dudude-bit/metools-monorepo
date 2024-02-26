@@ -1,13 +1,17 @@
-use actix_web::{get, Responder};
+use actix_web::{get, post, Responder};
 
-#[utoipa::path(
-get,
-path = "/users/me",
-responses(
-(status = 200, description = "Return info about current user", body = Pet)
-)
-)]
+
 #[get("/me")]
 fn me() -> impl Responder {
+    return String::from("");
+}
+
+#[post("/signup")]
+fn signup() -> impl Responder {
+
+}
+
+#[post("/login")]
+fn login() -> impl Responder {
 
 }

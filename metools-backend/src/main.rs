@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use actix_web::{App, HttpServer, web};
 use diesel::{PgConnection, r2d2};
 use diesel::r2d2::ConnectionManager;
+use uuid::Uuid;
 
 mod models;
 mod controllers;
@@ -18,5 +19,5 @@ async fn main() {
     let db_url = env::var("DB_URL").unwrap_or(String::from("postgresql://postgres:postgres@localhost:5432/metools"));
     let manager = ConnectionManager::<PgConnection>::new(db_url);
     let pool: DBPool = r2d2::Pool::builder().build(manager).expect("failed to create pg pool");
-    models::tasks::insert_new_task(&mut pool.get().expect("failed"), String::from("day"), HashMap::new());
+    models::tasks::insert_new_task(&mut pool.get().expect("failed"), Uuid::parse_str("94a22580-d52e-4ebc-b19b-c1b79409ac84").unwrap(), String::from("day"), HashMap::new());
 }

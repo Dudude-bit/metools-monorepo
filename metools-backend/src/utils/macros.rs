@@ -1,3 +1,4 @@
+use serde_json;
 macro_rules! impl_jsonb_boilerplate {
     ($name: ident) => {
         impl ::diesel::deserialize::FromSql<::diesel::sql_types::Jsonb, ::diesel::sql_types::Pg> for $name {
