@@ -1,2 +1,2 @@
-pub mod tasks;
+pub mod rzd;
 pub mod users;

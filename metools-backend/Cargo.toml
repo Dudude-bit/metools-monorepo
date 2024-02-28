@@ -14,3 +14,4 @@ serde = { version = "1.0.197", features = ["default"] }
 serde_json = { version = "1.0.114", features = ["default"] }
 serde_with = { version = "3.6.1", features = ["default"] }
 chrono = { version = "0.4.34", features = ["default", "serde"] }
+log = "0.4.20"

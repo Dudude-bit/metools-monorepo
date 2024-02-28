@@ -1,13 +1,12 @@
 use std::collections::HashMap;
 use std::env;
 
-use crate::models::tasks::{list_all_tasks, list_all_users_tasks};
-use actix_web::{web, App, HttpServer};
+use crate::controllers::users::{login, me, signup};
+use actix_web::{web, App, HttpResponse, HttpServer, Responder};
 use diesel::r2d2::ConnectionManager;
 use diesel::{r2d2, PgConnection};
+use log::log;
 use utoipa::OpenApi;
-use utoipa::openapi::{Info, OpenApiBuilder};
-use uuid::Uuid;
 
 mod controllers;
 mod models;
@@ -16,10 +15,12 @@ mod utils;
 
 type DBPool = r2d2::Pool<r2d2::ConnectionManager<PgConnection>>;
 #[derive(OpenApi)]
-#[openapi(
-    info(description = "Documentation to MeTools API", title = "MeTools", )
-)]
+#[openapi(info(description = "Documentation to MeTools API", title = "MeTools"))]
 struct OpenAPI;
+
+async fn swagger() -> impl Responder {
+    web::Json(OpenAPI::openapi())
+}
 
 #[actix_web::main]
 async fn main() {
@@ -32,6 +33,19 @@ async fn main() {
         .build(manager)
         .expect("failed to create pg pool");
 
-    let doc = OpenAPI::openapi();
-    println!("{:?}", list_all_users_tasks(&mut pool.get().unwrap(), "779c9940-654e-4b34-85cc-49b3cf60273f".parse().unwrap()));
+    HttpServer::new(|| {
+        App::new()
+            .route("/swagger", web::get().to(swagger))
+            .service(
+                web::scope("/api/v1")
+                    .service(me)
+                    .service(login)
+                    .service(signup),
+            )
+    })
+    .bind(http_address.clone())
+    .expect(format!("failed to bind to {}", http_address).as_str())
+    .run()
+    .await
+    .expect("failed to run server");
 }

@@ -50,13 +50,9 @@ pub fn insert_new_task(
         .get_result(conn);
 
     return match r {
-        Ok(task) => {
-            Ok(task)
-        }
-        Err(err) => {
-            Err(err)
-        }
-    }
+        Ok(task) => Ok(task),
+        Err(err) => Err(err),
+    };
 }
 
 pub fn list_all_tasks(conn: &mut PgConnection) -> Result<Vec<Task>, Error> {
