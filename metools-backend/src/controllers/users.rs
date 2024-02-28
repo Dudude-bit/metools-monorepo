@@ -1,17 +1,16 @@
 use actix_web::{get, post, Responder};
 
-
 #[get("/me")]
-fn me() -> impl Responder {
+async fn me() -> impl Responder {
     return String::from("");
 }
 
 #[post("/signup")]
-fn signup() -> impl Responder {
-
+async fn signup() -> impl Responder {
+    return String::from("");
 }
 
 #[post("/login")]
-fn login() -> impl Responder {
-
+async fn login() -> impl Responder {
+    return String::from("");
 }

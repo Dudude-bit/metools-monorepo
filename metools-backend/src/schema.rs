@@ -3,6 +3,7 @@
 diesel::table! {
     rzd_tasks (id) {
         id -> Uuid,
+        created_at -> Timestamptz,
         #[sql_name = "type"]
         type_ -> Text,
         data -> Jsonb,
@@ -19,7 +20,4 @@ diesel::table! {
 
 diesel::joinable!(rzd_tasks -> users (user_id));
 
-diesel::allow_tables_to_appear_in_same_query!(
-    rzd_tasks,
-    users,
-);
+diesel::allow_tables_to_appear_in_same_query!(rzd_tasks, users,);
