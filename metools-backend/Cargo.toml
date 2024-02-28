@@ -15,3 +15,6 @@ serde_json = { version = "1.0.114", features = ["default"] }
 serde_with = { version = "3.6.1", features = ["default"] }
 chrono = { version = "0.4.34", features = ["default", "serde"] }
 log = "0.4.20"
+jsonwebtoken = "9.2.0"
+argon2 = "0.5.3"
+rand_core = { version = "0.6.4", features = ["std"] }
