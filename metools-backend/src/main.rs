@@ -1,14 +1,15 @@
+mod config;
 mod controllers;
 mod models;
 mod schema;
 mod utils;
-mod config;
+mod services;
 
-
-use actix_web::{web, App, HttpResponse, HttpServer, Responder};
 use actix_web::middleware::Logger;
+use actix_web::{web, App, HttpResponse, HttpServer, Responder};
 use diesel::r2d2::ConnectionManager;
 use diesel::{r2d2, PgConnection};
+use env_logger;
 use utoipa::OpenApi;
 
 use crate::controllers::users::{login, me, signup};
@@ -24,7 +25,9 @@ async fn swagger() -> impl Responder {
 }
 
 #[actix_web::main]
-async fn main() {
+async fn main() -> std::io::Result<()> {
+    env_logger::init();
+
     let config = Config::init();
     let manager = ConnectionManager::<PgConnection>::new(config.db_url);
     let pool: DBPool = r2d2::Pool::builder()
@@ -33,20 +36,19 @@ async fn main() {
 
     HttpServer::new(|| {
         App::new()
-            .wrap(Logger::default())
             .route("/swagger", web::get().to(swagger))
             .service(
                 web::scope("/api/v1").service(
                     web::scope("/users")
                         .service(me)
                         .service(login)
-                        .service(signup)
+                        .service(signup),
                 ),
             )
+            .wrap(Logger::default())
     })
     .bind(config.http_address.clone())
     .expect(format!("failed to bind to {}", config.http_address).as_str())
     .run()
     .await
-    .expect("failed to run server");
 }

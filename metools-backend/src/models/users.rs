@@ -7,3 +7,8 @@ use uuid::Uuid;
 pub struct Users {
     id: Uuid,
 }
+
+
+pub fn insert_new_user(conn: &mut PgConnection, username: String, email: String, password: String) {
+
+}

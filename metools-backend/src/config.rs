@@ -15,9 +15,9 @@ impl Config {
         let db_url = env::var("DB_URL").unwrap_or(String::from(
             "postgresql://postgres:postgres@localhost:5432/metools",
         ));
-        let jwt_secret = std::env::var("JWT_SECRET").expect("JWT_SECRET must be set");
-        let jwt_expires_in = std::env::var("JWT_EXPIRED_IN").expect("JWT_EXPIRED_IN must be set");
-        let jwt_maxage = std::env::var("JWT_MAXAGE").expect("JWT_MAXAGE must be set");
+        let jwt_secret = env::var("JWT_SECRET").expect("JWT_SECRET must be set");
+        let jwt_expires_in = env::var("JWT_EXPIRED_IN").expect("JWT_EXPIRED_IN must be set");
+        let jwt_maxage = env::var("JWT_MAXAGE").expect("JWT_MAXAGE must be set");
 
         Self {
             db_url,
