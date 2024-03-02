@@ -4,7 +4,7 @@ use crate::models::users::{
 use crate::models::DBPool;
 
 use argon2::password_hash::SaltString;
-use argon2::{Argon2, PasswordHash, PasswordHasher as _, PasswordVerifier};
+use argon2::{Argon2, PasswordHash, PasswordHasher as _, PasswordVerifier as _};
 use derive_more::Display;
 
 use rand_core::OsRng;
@@ -12,6 +12,7 @@ use rand_core::OsRng;
 #[derive(Debug, Display)]
 pub enum UsersServiceError {
     UsersDBError(UsersDBError),
+    InvalidUserPassword,
     UnknownError,
 }
 
@@ -65,7 +66,10 @@ impl UsersService {
                 let is_valid = Argon2::default()
                     .verify_password(password.as_bytes(), &parsed_hash)
                     .map_or(false, |_| true);
-                return Err(UsersServiceError::UnknownError);
+                if !is_valid {
+                    return Err(UsersServiceError::InvalidUserPassword);
+                }
+                return Ok(user);
             }
             Err(err) => Err(UsersServiceError::UsersDBError(err)),
         }

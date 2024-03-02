@@ -1,9 +1,9 @@
 use crate::schema::users::dsl::users;
-use crate::schema::users::username;
+
 use derive_more::Display;
 use diesel::prelude::*;
 use serde::Serialize;
-use std::any::Any;
+
 use uuid::Uuid;
 
 #[derive(Debug, Display)]
@@ -77,11 +77,11 @@ pub fn get_user_by_username(
         .select(GetUserByUsernameReturn::as_returning())
         .get_result(conn);
 
-    return match r {
+    match r {
         Ok(user) => Ok(user),
         Err(err) => {
             log::error!("Error on get user by username {err}");
             Err(UsersDBError::UnknownError)
         }
-    };
+    }
 }

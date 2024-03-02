@@ -7,7 +7,6 @@ use actix_web::http::StatusCode;
 use actix_web::{get, post, web, HttpResponse, Responder, ResponseError};
 use derive_more::Display;
 
-use crate::models::users::GetUserByUsernameReturn;
 use serde::Deserialize;
 use serde_json::json;
 use validator::{Validate, ValidationErrors};
