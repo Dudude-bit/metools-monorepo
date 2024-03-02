@@ -39,7 +39,9 @@ enum UsersError {
 impl From<UsersServiceError> for UsersError {
     fn from(value: UsersServiceError) -> Self {
         return match value {
-            UsersServiceError::UnknownError => {}
+            UsersServiceError::UnknownError => {
+                Self::UnknownError
+            }
         };
     }
 }
@@ -48,7 +50,7 @@ impl ResponseError for UsersError {
     fn status_code(&self) -> StatusCode {
         return match self {
             InvalidInputData(_) => StatusCode::BAD_REQUEST,
-            UnknownError => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::UnknownError => StatusCode::INTERNAL_SERVER_ERROR,
         };
     }
     fn error_response(&self) -> HttpResponse<BoxBody> {
@@ -58,7 +60,7 @@ impl ResponseError for UsersError {
                 .body(
                     json!({"message": "Invalid input data", "status": "invalid_data"}).to_string(),
                 ),
-            UnknownError => HttpResponse::build(self.status_code())
+            Self::UnknownError => HttpResponse::build(self.status_code())
                 .insert_header(ContentType::json())
                 .body(json!({"message": "Unknown error", "status": "unknown_error"}).to_string()),
         };
@@ -84,8 +86,12 @@ async fn signup(
                     data.password.clone(),
                 );
                 match r {
-                    Ok(user) => return Js,
-                    Err(err) => {}
+                    Ok(user) => {
+                        String::from("123")
+                    } ,
+                    Err(err) => {
+                        String::from("123")
+                    }
                 }
             })
             .await
