@@ -1,14 +1,12 @@
 use crate::services::users::UsersServiceError;
 use crate::AppState;
 use actix_web::body::BoxBody;
-use actix_web::error::BlockingError;
+
 use actix_web::http::header::ContentType;
 use actix_web::http::StatusCode;
 use actix_web::{get, post, web, HttpResponse, Responder, ResponseError};
 use derive_more::Display;
 
-use crate::models::users::User;
-use crate::schema::users::dsl::users;
 use serde::Deserialize;
 use serde_json::json;
 use validator::{Validate, ValidationErrors};
@@ -42,7 +40,7 @@ impl ResponseError for UsersError {
     fn status_code(&self) -> StatusCode {
         match self {
             Self::InvalidInputData(_) => StatusCode::BAD_REQUEST,
-            Self::UsersServiceError(service_err) => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::UsersServiceError(_service_err) => StatusCode::INTERNAL_SERVER_ERROR,
             Self::UnknownError => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
@@ -53,7 +51,7 @@ impl ResponseError for UsersError {
                 .body(
                     json!({"message": "Invalid input data", "status": "invalid_data"}).to_string(),
                 ),
-            Self::UsersServiceError(service_err) => HttpResponse::build(self.status_code())
+            Self::UsersServiceError(_service_err) => HttpResponse::build(self.status_code())
                 .insert_header(ContentType::json())
                 .body(json!({"message": "Unknown error", "status": "unknown_error"}).to_string()),
             Self::UnknownError => HttpResponse::build(self.status_code())
@@ -84,10 +82,10 @@ async fn signup(
             })
             .await
             .unwrap();
-            return match r {
+            match r {
                 Ok(user) => Ok(web::Json(user)),
                 Err(err) => Err(UsersError::UsersServiceError(err)),
-            };
+            }
         }
         Err(err) => Err(UsersError::InvalidInputData(err)),
     }
