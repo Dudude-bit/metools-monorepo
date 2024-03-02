@@ -3,9 +3,11 @@ use crate::models::DBPool;
 use actix_web::ResponseError;
 use argon2::password_hash::SaltString;
 use argon2::{Argon2, PasswordHasher as _};
+use derive_more::Display;
 
 use rand_core::OsRng;
 
+#[derive(Debug, Display)]
 pub enum UsersServiceError {
     UnknownError,
 }

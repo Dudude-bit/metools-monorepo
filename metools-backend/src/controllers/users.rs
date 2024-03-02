@@ -72,7 +72,7 @@ async fn me() -> Result<impl Responder, UsersError> {
 async fn signup(
     data: web::Json<SignUpData>,
     state: web::Data<AppState>,
-) -> Result<impl Responder, impl ResponseError> {
+) -> Result<impl Responder, UsersError> {
     match data.validate() {
         Ok(_) => {
             let r = web::block(move || {
@@ -86,7 +86,7 @@ async fn signup(
             .unwrap();
             return match r {
                 Ok(user) => Ok(web::Json(user)),
-                Err(err) => Err(err.into()),
+                Err(err) => Err(UsersError::UsersServiceError(err)),
             };
         }
         Err(err) => Err(UsersError::InvalidInputData(err)),
@@ -97,7 +97,7 @@ async fn signup(
 async fn login(
     data: web::Json<LoginData>,
     _state: web::Data<AppState>,
-) -> Result<impl Responder, impl ResponseError> {
+) -> Result<impl Responder, UsersError> {
     match data.validate() {
         Ok(_) => Ok(String::from("123")),
         Err(err) => Err(UsersError::InvalidInputData(err)),
