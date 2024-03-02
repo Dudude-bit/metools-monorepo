@@ -1,5 +1,3 @@
-use crate::models::rzd::tasks::Task;
-use crate::schema::rzd_tasks::dsl::rzd_tasks;
 use crate::schema::users::dsl::users;
 use diesel::prelude::*;
 use uuid::Uuid;
@@ -27,8 +25,6 @@ pub fn insert_new_user(
     user_email: String,
     user_password: String,
 ) {
-    use crate::schema::users;
-
     let new_user = NewUser {
         id: Uuid::new_v4(),
         username: user_username,
@@ -36,7 +32,7 @@ pub fn insert_new_user(
         password: user_password,
     };
 
-    let r: QueryResult<User> = diesel::insert_into(users)
+    let _r: QueryResult<User> = diesel::insert_into(users)
         .values(&new_user)
         .returning(User::as_returning())
         .get_result(conn);

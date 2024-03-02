@@ -1,9 +1,9 @@
 use crate::models::users::{insert_new_user, User};
 use crate::models::DBPool;
-use crate::services::users::UsersServiceError::UnknownError;
+use actix_web::ResponseError;
 use argon2::password_hash::SaltString;
 use argon2::{Argon2, PasswordHasher as _};
-use diesel::PgConnection;
+
 use rand_core::OsRng;
 
 pub enum UsersServiceError {
@@ -27,20 +27,20 @@ impl UsersService {
     ) -> Result<User, UsersServiceError> {
         let salt = SaltString::generate(&mut OsRng);
         let hashed_password = Argon2::default().hash_password(password.as_bytes(), &salt);
-        return match hashed_password {
+        match hashed_password {
             Ok(hashed_password) => {
-                let user = insert_new_user(
+                insert_new_user(
                     &mut self.pool.get().unwrap(),
                     username,
                     email,
                     hashed_password.to_string(),
                 );
-                Err(UnknownError)
+                Err(UsersServiceError::UnknownError)
             }
             Err(err) => {
                 log::error!("Error on hashing password while registering user: {err}");
-                Err(UnknownError)
+                Err(UsersServiceError::UnknownError)
             }
-        };
+        }
     }
 }

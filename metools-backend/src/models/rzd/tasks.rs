@@ -49,19 +49,13 @@ pub fn insert_new_task(
         .returning(Task::as_returning())
         .get_result(conn);
 
-    match r {
-        Ok(task) => Ok(task),
-        Err(err) => Err(err),
-    }
+    r
 }
 
 pub fn list_all_tasks(conn: &mut PgConnection) -> Result<Vec<Task>, Error> {
     let r: QueryResult<Vec<Task>> = rzd_tasks.select(Task::as_select()).load(conn);
 
-    match r {
-        Ok(tasks) => Ok(tasks),
-        Err(err) => Err(err),
-    }
+    r
 }
 
 pub fn list_all_users_tasks(
@@ -75,8 +69,5 @@ pub fn list_all_users_tasks(
         .select(Task::as_select())
         .load(conn);
 
-    match r {
-        Ok(tasks) => Ok(tasks),
-        Err(err) => Err(err),
-    }
+    r
 }

@@ -6,10 +6,11 @@ mod services;
 mod utils;
 
 use actix_web::middleware::Logger;
-use actix_web::{web, App, HttpResponse, HttpServer, Responder};
+use actix_web::{web, App, HttpServer, Responder};
 use diesel::r2d2::ConnectionManager;
 use diesel::{r2d2, PgConnection};
-use env_logger;
+use std::env;
+
 use utoipa::OpenApi;
 
 use crate::controllers::users::{login, me, signup};
@@ -31,6 +32,8 @@ async fn swagger() -> impl Responder {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    env::set_var("RUST_LOG", "debug");
+
     env_logger::init();
     let config = Config::init();
 
@@ -55,7 +58,7 @@ async fn main() -> std::io::Result<()> {
             }))
     })
     .bind(config.http_address.clone())
-    .expect(format!("failed to bind to {}", config.http_address).as_str())
+    .unwrap_or_else(|_| panic!("failed to bind to {}", config.http_address))
     .run()
     .await
 }

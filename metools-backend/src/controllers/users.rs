@@ -1,13 +1,14 @@
-use crate::controllers::users::UsersError::InvalidInputData;
-use crate::models::users::User;
 use crate::services::users::UsersServiceError;
 use crate::AppState;
 use actix_web::body::BoxBody;
+use actix_web::error::BlockingError;
 use actix_web::http::header::ContentType;
 use actix_web::http::StatusCode;
-use actix_web::{get, http, post, web, App, HttpResponse, Responder, ResponseError};
-use derive_more::{Display, Error};
-use serde::de::Unexpected::Str;
+use actix_web::{get, post, web, HttpResponse, Responder, ResponseError};
+use derive_more::Display;
+
+use crate::models::users::User;
+use crate::schema::users::dsl::users;
 use serde::Deserialize;
 use serde_json::json;
 use validator::{Validate, ValidationErrors};
@@ -33,33 +34,28 @@ struct LoginData {
 #[derive(Debug, Display)]
 enum UsersError {
     InvalidInputData(ValidationErrors),
+    UsersServiceError(UsersServiceError),
     UnknownError,
-}
-
-impl From<UsersServiceError> for UsersError {
-    fn from(value: UsersServiceError) -> Self {
-        return match value {
-            UsersServiceError::UnknownError => {
-                Self::UnknownError
-            }
-        };
-    }
 }
 
 impl ResponseError for UsersError {
     fn status_code(&self) -> StatusCode {
-        return match self {
-            InvalidInputData(_) => StatusCode::BAD_REQUEST,
+        match self {
+            Self::InvalidInputData(_) => StatusCode::BAD_REQUEST,
+            Self::UsersServiceError(service_err) => StatusCode::INTERNAL_SERVER_ERROR,
             Self::UnknownError => StatusCode::INTERNAL_SERVER_ERROR,
-        };
+        }
     }
     fn error_response(&self) -> HttpResponse<BoxBody> {
         return match self {
-            InvalidInputData(errors) => HttpResponse::build(self.status_code())
+            Self::InvalidInputData(_errors) => HttpResponse::build(self.status_code())
                 .insert_header(ContentType::json())
                 .body(
                     json!({"message": "Invalid input data", "status": "invalid_data"}).to_string(),
                 ),
+            Self::UsersServiceError(service_err) => HttpResponse::build(self.status_code())
+                .insert_header(ContentType::json())
+                .body(json!({"message": "Unknown error", "status": "unknown_error"}).to_string()),
             Self::UnknownError => HttpResponse::build(self.status_code())
                 .insert_header(ContentType::json())
                 .body(json!({"message": "Unknown error", "status": "unknown_error"}).to_string()),
@@ -76,39 +72,34 @@ async fn me() -> Result<impl Responder, UsersError> {
 async fn signup(
     data: web::Json<SignUpData>,
     state: web::Data<AppState>,
-) -> Result<impl Responder, UsersError> {
-    return match data.validate() {
+) -> Result<impl Responder, impl ResponseError> {
+    match data.validate() {
         Ok(_) => {
-            web::block(move || {
-                let r = state.users_service.register_user(
+            let r = web::block(move || {
+                state.users_service.register_user(
                     data.username.clone(),
                     data.email.clone(),
                     data.password.clone(),
-                );
-                match r {
-                    Ok(user) => {
-                        String::from("123")
-                    } ,
-                    Err(err) => {
-                        String::from("123")
-                    }
-                }
+                )
             })
             .await
             .unwrap();
-            Ok(String::from("123"))
+            return match r {
+                Ok(user) => Ok(web::Json(user)),
+                Err(err) => Err(err.into()),
+            };
         }
-        Err(err) => Err(InvalidInputData(err)),
-    };
+        Err(err) => Err(UsersError::InvalidInputData(err)),
+    }
 }
 
 #[post("/login")]
 async fn login(
     data: web::Json<LoginData>,
-    state: web::Data<AppState>,
-) -> Result<impl Responder, UsersError> {
-    return match data.validate() {
+    _state: web::Data<AppState>,
+) -> Result<impl Responder, impl ResponseError> {
+    match data.validate() {
         Ok(_) => Ok(String::from("123")),
-        Err(err) => Err(InvalidInputData(err)),
-    };
+        Err(err) => Err(UsersError::InvalidInputData(err)),
+    }
 }
