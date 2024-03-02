@@ -39,7 +39,7 @@ impl UsersService {
                     hashed_password.to_string(),
                 );
                 match r {
-                    Ok(user) => return Ok(user),
+                    Ok(user) => Ok(user),
                     Err(err) => Err(UsersServiceError::UsersDBError(err)),
                 }
             }

@@ -44,11 +44,11 @@ pub fn insert_new_user(
         .returning(User::as_returning())
         .get_result(conn);
 
-    return match r {
+    match r {
         Ok(user) => Ok(user),
         Err(err) => {
             log::error!("Error on inserting user {err}");
             Err(UsersDBError::UnknownError)
         }
-    };
+    }
 }
