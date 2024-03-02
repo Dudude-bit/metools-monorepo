@@ -2,8 +2,8 @@ mod config;
 mod controllers;
 mod models;
 mod schema;
-mod utils;
 mod services;
+mod utils;
 
 use actix_web::middleware::Logger;
 use actix_web::{web, App, HttpResponse, HttpServer, Responder};
@@ -13,9 +13,14 @@ use env_logger;
 use utoipa::OpenApi;
 
 use crate::controllers::users::{login, me, signup};
+use crate::models::DBPool;
+use crate::services::users::UsersService;
 use config::Config;
 
-type DBPool = r2d2::Pool<r2d2::ConnectionManager<PgConnection>>;
+struct AppState {
+    pub users_service: UsersService,
+}
+
 #[derive(OpenApi)]
 #[openapi(info(description = "Documentation to MeTools API", title = "MeTools"))]
 struct OpenAPI;
@@ -27,14 +32,13 @@ async fn swagger() -> impl Responder {
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     env_logger::init();
-
     let config = Config::init();
-    let manager = ConnectionManager::<PgConnection>::new(config.db_url);
-    let pool: DBPool = r2d2::Pool::builder()
-        .build(manager)
-        .expect("failed to create pg pool");
 
-    HttpServer::new(|| {
+    HttpServer::new(move || {
+        let manager = ConnectionManager::<PgConnection>::new(config.db_url.clone());
+        let pool: DBPool = r2d2::Pool::builder()
+            .build(manager)
+            .expect("failed to create pg pool");
         App::new()
             .route("/swagger", web::get().to(swagger))
             .service(
@@ -46,6 +50,9 @@ async fn main() -> std::io::Result<()> {
                 ),
             )
             .wrap(Logger::default())
+            .app_data(web::Data::new(AppState {
+                users_service: UsersService::init(pool),
+            }))
     })
     .bind(config.http_address.clone())
     .expect(format!("failed to bind to {}", config.http_address).as_str())
