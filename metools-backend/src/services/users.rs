@@ -1,8 +1,10 @@
-use crate::models::users::{insert_new_user, User, UsersDBError};
+use crate::models::users::{
+    get_user_by_username, insert_new_user, GetUserByUsernameReturn, UserReturn, UsersDBError,
+};
 use crate::models::DBPool;
 
 use argon2::password_hash::SaltString;
-use argon2::{Argon2, PasswordHasher as _};
+use argon2::{Argon2, PasswordHash, PasswordHasher as _, PasswordVerifier};
 use derive_more::Display;
 
 use rand_core::OsRng;
@@ -27,7 +29,7 @@ impl UsersService {
         username: String,
         email: String,
         password: String,
-    ) -> Result<User, UsersServiceError> {
+    ) -> Result<UserReturn, UsersServiceError> {
         let salt = SaltString::generate(&mut OsRng);
         let hashed_password = Argon2::default().hash_password(password.as_bytes(), &salt);
         match hashed_password {
@@ -47,6 +49,25 @@ impl UsersService {
                 log::error!("Error on hashing password while registering user: {err}");
                 Err(UsersServiceError::UnknownError)
             }
+        }
+    }
+
+    pub fn authenticate_user(
+        &self,
+        username: String,
+        password: String,
+    ) -> Result<GetUserByUsernameReturn, UsersServiceError> {
+        let r = get_user_by_username(&mut self.pool.get().unwrap(), username);
+
+        match r {
+            Ok(user) => {
+                let parsed_hash = PasswordHash::new(user.password.as_str()).unwrap();
+                let is_valid = Argon2::default()
+                    .verify_password(password.as_bytes(), &parsed_hash)
+                    .map_or(false, |_| true);
+                return Err(UsersServiceError::UnknownError);
+            }
+            Err(err) => Err(UsersServiceError::UsersDBError(err)),
         }
     }
 }

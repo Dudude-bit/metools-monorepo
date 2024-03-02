@@ -7,6 +7,7 @@ use actix_web::http::StatusCode;
 use actix_web::{get, post, web, HttpResponse, Responder, ResponseError};
 use derive_more::Display;
 
+use crate::models::users::GetUserByUsernameReturn;
 use serde::Deserialize;
 use serde_json::json;
 use validator::{Validate, ValidationErrors};
@@ -94,10 +95,18 @@ async fn signup(
 #[post("/login")]
 async fn login(
     data: web::Json<LoginData>,
-    _state: web::Data<AppState>,
+    state: web::Data<AppState>,
 ) -> Result<impl Responder, UsersError> {
     match data.validate() {
-        Ok(_) => Ok(String::from("123")),
+        Ok(_) => {
+            let r = state
+                .users_service
+                .authenticate_user(data.username.clone(), data.password.clone());
+            match r {
+                Ok(user) => Ok(web::Json(user)),
+                Err(err) => Err(UsersError::UsersServiceError(err)),
+            }
+        }
         Err(err) => Err(UsersError::InvalidInputData(err)),
     }
 }
