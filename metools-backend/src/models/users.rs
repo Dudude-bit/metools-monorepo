@@ -2,7 +2,7 @@ use crate::schema::users::dsl::users;
 
 use derive_more::Display;
 use diesel::prelude::*;
-use diesel::row::NamedRow;
+
 use serde::Serialize;
 
 use uuid::Uuid;

@@ -6,7 +6,7 @@ use actix_web::cookie::{time::Duration as ActixWebDuration, Cookie};
 use actix_web::http::header::ContentType;
 use actix_web::http::StatusCode;
 use actix_web::{
-    get, post, web, App, HttpMessage, HttpRequest, HttpResponse, Responder, ResponseError,
+    get, post, web, HttpMessage, HttpRequest, HttpResponse, Responder, ResponseError,
 };
 use chrono::{Duration, Utc};
 use derive_more::Display;
@@ -84,7 +84,7 @@ async fn me(
         .get_user_by_id(*req.extensions().get::<Uuid>().unwrap());
 
     match { r } {
-        Ok(user) => return Ok(web::Json(json!({"status": "success", "data": user}))),
+        Ok(user) => Ok(web::Json(json!({"status": "success", "data": user}))),
         Err(err) => Err(UsersError::UsersServiceError(err)),
     }
 }
