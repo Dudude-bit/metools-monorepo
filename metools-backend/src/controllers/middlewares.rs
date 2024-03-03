@@ -23,7 +23,7 @@ impl FromRequest for UserMiddleware {
 
         if token.is_none() {
             return ready(Err(ErrorUnauthorized(web::Json(
-                json!({"status": "unauthorized", "message": "Unauthorized"}),
+                json!({"status": "unauthorized", "error": "Unauthorized"}),
             ))));
         }
 
@@ -35,7 +35,7 @@ impl FromRequest for UserMiddleware {
             Ok(c) => c.claims,
             Err(_) => {
                 return ready(Err(ErrorUnauthorized(web::Json(
-                    json!({"status": "unauthorized", "message": "Unauthorized"}),
+                    json!({"status": "unauthorized", "error": "Unauthorized"}),
                 ))));
             }
         };
