@@ -128,7 +128,8 @@ async fn login(
                 Ok(user) => {
                     let now = Utc::now();
                     let iat = now.timestamp() as usize;
-                    let exp = (now + Duration::minutes(state.jwt_maxage as i64)).timestamp() as usize;
+                    let exp =
+                        (now + Duration::minutes(state.jwt_maxage as i64)).timestamp() as usize;
                     let claims: TokenClaims = TokenClaims {
                         sub: user.id.to_string(),
                         exp,
