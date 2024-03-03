@@ -20,6 +20,7 @@ use config::Config;
 
 struct AppState {
     pub users_service: UsersService,
+    pub jwt_secret: String,
 }
 
 #[derive(OpenApi)]
@@ -55,6 +56,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(Logger::default())
             .app_data(web::Data::new(AppState {
                 users_service: UsersService::init(pool),
+                jwt_secret: config.jwt_secret.clone(),
             }))
     })
     .bind(config.http_address.clone())

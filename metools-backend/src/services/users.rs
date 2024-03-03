@@ -69,7 +69,7 @@ impl UsersService {
                 if !is_valid {
                     return Err(UsersServiceError::InvalidUserPassword);
                 }
-                return Ok(user);
+                Ok(user)
             }
             Err(err) => Err(UsersServiceError::UsersDBError(err)),
         }

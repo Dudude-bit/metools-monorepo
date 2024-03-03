@@ -12,6 +12,15 @@ diesel::table! {
 }
 
 diesel::table! {
+    tokens (id) {
+        id -> Uuid,
+        created_at -> Timestamptz,
+        token -> Uuid,
+        user_id -> Uuid,
+    }
+}
+
+diesel::table! {
     users (id) {
         id -> Uuid,
         username -> Text,
@@ -22,5 +31,6 @@ diesel::table! {
 }
 
 diesel::joinable!(rzd_tasks -> users (user_id));
+diesel::joinable!(tokens -> users (user_id));
 
-diesel::allow_tables_to_appear_in_same_query!(rzd_tasks, users,);
+diesel::allow_tables_to_appear_in_same_query!(rzd_tasks, tokens, users,);
