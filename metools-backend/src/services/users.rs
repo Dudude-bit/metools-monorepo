@@ -1,5 +1,6 @@
 use crate::models::users::{
-    get_user_by_username, insert_new_user, GetUserByUsernameReturn, UserReturn, UsersDBError,
+    get_user_by_id, get_user_by_username, insert_new_user, GetUserByUsernameReturn, UserReturn,
+    UsersDBError,
 };
 use crate::models::DBPool;
 
@@ -8,6 +9,7 @@ use argon2::{Argon2, PasswordHash, PasswordHasher as _, PasswordVerifier as _};
 use derive_more::Display;
 
 use rand_core::OsRng;
+use uuid::Uuid;
 
 #[derive(Debug, Display)]
 pub enum UsersServiceError {
@@ -71,6 +73,15 @@ impl UsersService {
                 }
                 Ok(user)
             }
+            Err(err) => Err(UsersServiceError::UsersDBError(err)),
+        }
+    }
+
+    pub fn get_user_by_id(&self, user_id: Uuid) -> Result<UserReturn, UsersServiceError> {
+        let r = get_user_by_id(&mut self.pool.get().unwrap(), user_id);
+
+        match r {
+            Ok(user) => Ok(user),
             Err(err) => Err(UsersServiceError::UsersDBError(err)),
         }
     }

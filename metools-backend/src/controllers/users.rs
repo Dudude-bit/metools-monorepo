@@ -5,7 +5,9 @@ use actix_web::body::BoxBody;
 use actix_web::cookie::{time::Duration as ActixWebDuration, Cookie};
 use actix_web::http::header::ContentType;
 use actix_web::http::StatusCode;
-use actix_web::{get, post, web, HttpResponse, Responder, ResponseError};
+use actix_web::{
+    get, post, web, App, HttpMessage, HttpRequest, HttpResponse, Responder, ResponseError,
+};
 use chrono::{Duration, Utc};
 use derive_more::Display;
 use jsonwebtoken::{encode, EncodingKey, Header};
@@ -13,6 +15,7 @@ use jsonwebtoken::{encode, EncodingKey, Header};
 use crate::controllers::middlewares::UserMiddleware;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use uuid::Uuid;
 use validator::{Validate, ValidationErrors};
 
 #[derive(Deserialize, Validate)]
@@ -71,8 +74,19 @@ impl ResponseError for UsersError {
 }
 
 #[get("/me")]
-async fn me(user: UserMiddleware) -> Result<impl Responder, UsersError> {
-    Ok(String::from("123"))
+async fn me(
+    _: UserMiddleware,
+    req: HttpRequest,
+    data: web::Data<AppState>,
+) -> Result<impl Responder, UsersError> {
+    let r = data
+        .users_service
+        .get_user_by_id(*req.extensions().get::<Uuid>().unwrap());
+
+    match { r } {
+        Ok(user) => return Ok(web::Json(json!({"status": "success", "data": user}))),
+        Err(err) => Err(UsersError::UsersServiceError(err)),
+    }
 }
 
 #[post("/signup")]

@@ -2,6 +2,7 @@ use crate::schema::users::dsl::users;
 
 use derive_more::Display;
 use diesel::prelude::*;
+use diesel::row::NamedRow;
 use serde::Serialize;
 
 use uuid::Uuid;
@@ -74,13 +75,30 @@ pub fn get_user_by_username(
 
     let r: QueryResult<GetUserByUsernameReturn> = users
         .filter(username.eq(user_username))
-        .select(GetUserByUsernameReturn::as_returning())
+        .select(GetUserByUsernameReturn::as_select())
         .get_result(conn);
 
     match r {
         Ok(user) => Ok(user),
         Err(err) => {
             log::error!("Error on get user by username {err}");
+            Err(UsersDBError::UnknownError)
+        }
+    }
+}
+
+pub fn get_user_by_id(conn: &mut PgConnection, user_id: Uuid) -> Result<UserReturn, UsersDBError> {
+    use crate::schema::users::dsl::*;
+
+    let r: QueryResult<UserReturn> = users
+        .filter(id.eq(user_id))
+        .select(UserReturn::as_select())
+        .get_result(conn);
+
+    match r {
+        Ok(user) => Ok(user),
+        Err(err) => {
+            log::error!("Error on get user by id {err}");
             Err(UsersDBError::UnknownError)
         }
     }

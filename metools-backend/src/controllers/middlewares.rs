@@ -2,10 +2,9 @@ use std::future::{ready, Ready};
 
 use actix_web::error::ErrorUnauthorized;
 use actix_web::{dev::Payload, Error as ActixWebError};
-use actix_web::{http, web, FromRequest, HttpMessage, HttpRequest};
+use actix_web::{web, FromRequest, HttpMessage, HttpRequest};
 use jsonwebtoken::{decode, DecodingKey, Validation};
 use serde_json::json;
-use uuid::Uuid;
 
 use crate::controllers::users::TokenClaims;
 use crate::AppState;
@@ -44,7 +43,6 @@ impl FromRequest for UserMiddleware {
         let user_id = uuid::Uuid::parse_str(claims.sub.as_str()).unwrap();
         req.extensions_mut()
             .insert::<uuid::Uuid>(user_id.to_owned());
-
         ready(Ok(Self { user_id }))
     }
 }
