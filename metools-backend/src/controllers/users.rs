@@ -16,6 +16,8 @@ use serde_json::json;
 use uuid::Uuid;
 use validator::{Validate, ValidationErrors};
 
+const TOKEN_COOKIE_FIELD: &str = "token";
+
 #[derive(Deserialize, Validate)]
 struct SignUpData {
     username: String,
@@ -126,7 +128,7 @@ async fn login(
                 Ok(user) => {
                     let now = Utc::now();
                     let iat = now.timestamp() as usize;
-                    let exp = (now + Duration::minutes(60)).timestamp() as usize;
+                    let exp = (now + Duration::minutes(state.jwt_maxage as i64)).timestamp() as usize;
                     let claims: TokenClaims = TokenClaims {
                         sub: user.id.to_string(),
                         exp,
@@ -140,9 +142,9 @@ async fn login(
                     )
                     .unwrap();
 
-                    let cookie = Cookie::build("token", token.to_owned())
+                    let cookie = Cookie::build(TOKEN_COOKIE_FIELD, token.to_owned())
                         .path("/")
-                        .max_age(ActixWebDuration::new(60 * 60, 0))
+                        .max_age(ActixWebDuration::new((60 * state.jwt_maxage) as i64, 0))
                         .http_only(true)
                         .finish();
                     Ok(HttpResponse::Ok()
@@ -158,7 +160,7 @@ async fn login(
 
 #[get("/logout")]
 async fn logout_handler(_: UserMiddleware) -> impl Responder {
-    let cookie = Cookie::build("token", "")
+    let cookie = Cookie::build(TOKEN_COOKIE_FIELD, "")
         .path("/")
         .max_age(ActixWebDuration::new(-1, 0))
         .http_only(true)
