@@ -58,7 +58,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(AppState {
                 users_service: UsersService::init(pool),
                 jwt_secret: config.jwt_secret.clone(),
-                jwt_maxage: config.jwt_maxage.clone(),
+                jwt_maxage: config.jwt_maxage,
             }))
     })
     .bind(config.http_address.clone())

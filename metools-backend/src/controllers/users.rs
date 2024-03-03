@@ -63,7 +63,7 @@ impl ResponseError for UsersError {
             Self::InvalidInputData(_errors) => HttpResponse::build(self.status_code())
                 .insert_header(ContentType::json())
                 .body(json!({"error": "Invalid input data", "status": "invalid_data"}).to_string()),
-            Self::UsersServiceError(_service_err) => HttpResponse::build(self.status_code())
+            Self::UsersServiceError(service_err) => HttpResponse::build(self.status_code())
                 .insert_header(ContentType::json())
                 .body(json!({"error": "Unknown error", "status": "unknown_error"}).to_string()),
             Self::UnknownError => HttpResponse::build(self.status_code())
