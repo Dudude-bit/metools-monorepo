@@ -10,6 +10,8 @@ use actix_web::{web, App, HttpServer, Responder};
 use diesel::r2d2::ConnectionManager;
 use diesel::{r2d2, PgConnection};
 use std::env;
+use std::fs::File;
+use std::io::Write;
 
 use utoipa::OpenApi;
 
@@ -34,6 +36,21 @@ async fn swagger() -> impl Responder {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+
+    if env::args().len() > 1 {
+        match env::args().nth(1).unwrap().as_str() {
+            "gen-swagger" => {
+                let path = env::args().nth(2).expect("Need path parameter");
+                let mut file = File::create(path.clone()).expect(format!("Cant create file with path {}", path.clone()).as_str());
+                file.write_all(OpenAPI::openapi().to_pretty_json().unwrap().as_bytes()).expect(format!("Cant write to file with path {}", path.clone()).as_str())
+            }
+            &_ => {
+                panic!("Unknown CLI command");
+            }
+        }
+        return Ok(());
+    }
+
     env::set_var("RUST_LOG", "debug");
 
     env_logger::init();

@@ -54,7 +54,11 @@ impl ResponseError for UsersError {
     fn status_code(&self) -> StatusCode {
         match self {
             Self::InvalidInputData(_) => StatusCode::BAD_REQUEST,
-            Self::UsersServiceError(_service_err) => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::UsersServiceError(service_err) => match service_err {
+                UsersServiceError::UsersDBError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+                UsersServiceError::InvalidUserPassword => StatusCode::UNAUTHORIZED,
+                UsersServiceError::UnknownError => StatusCode::INTERNAL_SERVER_ERROR,
+            },
             Self::UnknownError => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
@@ -63,9 +67,20 @@ impl ResponseError for UsersError {
             Self::InvalidInputData(_errors) => HttpResponse::build(self.status_code())
                 .insert_header(ContentType::json())
                 .body(json!({"error": "Invalid input data", "status": "invalid_data"}).to_string()),
-            Self::UsersServiceError(service_err) => HttpResponse::build(self.status_code())
-                .insert_header(ContentType::json())
-                .body(json!({"error": "Unknown error", "status": "unknown_error"}).to_string()),
+            Self::UsersServiceError(service_err) => match service_err {
+                UsersServiceError::UsersDBError(_) => HttpResponse::build(self.status_code())
+                    .insert_header(ContentType::json())
+                    .body(json!({"error": "Unknown error", "status": "unknown_error"}).to_string()),
+                UsersServiceError::InvalidUserPassword => HttpResponse::build(self.status_code())
+                    .insert_header(ContentType::json())
+                    .body(
+                        json!({"error": "Invalid credentials", "status": "invalid_credentials"})
+                            .to_string(),
+                    ),
+                UsersServiceError::UnknownError => HttpResponse::build(self.status_code())
+                    .insert_header(ContentType::json())
+                    .body(json!({"error": "Unknown error", "status": "unknown_error"}).to_string()),
+            },
             Self::UnknownError => HttpResponse::build(self.status_code())
                 .insert_header(ContentType::json())
                 .body(json!({"error": "Unknown error", "status": "unknown_error"}).to_string()),
@@ -159,6 +174,7 @@ async fn login(
     }
 }
 
+#[utoipa::path]
 #[get("/logout")]
 async fn logout_handler(_: UserMiddleware) -> impl Responder {
     let cookie = Cookie::build(TOKEN_COOKIE_FIELD, "")
