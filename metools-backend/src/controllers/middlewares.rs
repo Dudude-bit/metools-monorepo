@@ -9,9 +9,7 @@ use serde_json::json;
 use crate::controllers::users::TokenClaims;
 use crate::AppState;
 
-pub struct UserMiddleware {
-    user_id: uuid::Uuid,
-}
+pub struct UserMiddleware;
 
 impl FromRequest for UserMiddleware {
     type Error = ActixWebError;
@@ -43,6 +41,6 @@ impl FromRequest for UserMiddleware {
         let user_id = uuid::Uuid::parse_str(claims.sub.as_str()).unwrap();
         req.extensions_mut()
             .insert::<uuid::Uuid>(user_id.to_owned());
-        ready(Ok(Self { user_id }))
+        ready(Ok(Self))
     }
 }
