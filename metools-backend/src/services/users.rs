@@ -1,15 +1,14 @@
+use argon2::password_hash::SaltString;
+use argon2::{Argon2, PasswordHash, PasswordHasher as _, PasswordVerifier as _};
+use derive_more::Display;
+use rand_core::OsRng;
+use uuid::Uuid;
+
 use crate::models::users::{
     get_user_by_id, get_user_by_username, insert_new_user, GetUserByUsernameReturn, UserReturn,
     UsersDBError,
 };
 use crate::models::DBPool;
-
-use argon2::password_hash::SaltString;
-use argon2::{Argon2, PasswordHash, PasswordHasher as _, PasswordVerifier as _};
-use derive_more::Display;
-
-use rand_core::OsRng;
-use uuid::Uuid;
 
 #[derive(Debug, Display)]
 pub enum UsersServiceError {
@@ -18,6 +17,7 @@ pub enum UsersServiceError {
     UnknownError,
 }
 
+#[derive(Clone)]
 pub struct UsersService {
     pool: DBPool,
 }

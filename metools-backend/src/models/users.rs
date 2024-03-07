@@ -1,11 +1,9 @@
-use crate::schema::users::dsl::users;
-
 use derive_more::Display;
 use diesel::prelude::*;
-
 use serde::Serialize;
-
 use uuid::Uuid;
+
+use crate::schema::users::dsl::users;
 
 #[derive(Debug, Display)]
 pub enum UsersDBError {

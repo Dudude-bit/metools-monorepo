@@ -1,7 +1,4 @@
-use crate::services::users::UsersServiceError;
-use crate::AppState;
 use actix_web::body::BoxBody;
-
 use actix_web::cookie::{time::Duration as ActixWebDuration, Cookie};
 use actix_web::http::header::ContentType;
 use actix_web::http::StatusCode;
@@ -9,12 +6,14 @@ use actix_web::{get, post, web, HttpMessage, HttpRequest, HttpResponse, Responde
 use chrono::{Duration, Utc};
 use derive_more::Display;
 use jsonwebtoken::{encode, EncodingKey, Header};
-
-use crate::controllers::middlewares::UserMiddleware;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use uuid::Uuid;
 use validator::{Validate, ValidationErrors};
+
+use crate::services::users::UsersServiceError;
+use crate::AppState;
+use crate::controllers::middlewares::UserMiddleware;
 
 const TOKEN_COOKIE_FIELD: &str = "token";
 
@@ -94,11 +93,12 @@ async fn me(
     req: HttpRequest,
     data: web::Data<AppState>,
 ) -> Result<impl Responder, UsersError> {
-    let r = data
-        .users_service
-        .get_user_by_id(*req.extensions().get::<Uuid>().unwrap());
+    let user_id = *req.extensions().get::<Uuid>().unwrap();
+    let r = web::block(move || data.users_service.get_user_by_id(user_id))
+        .await
+        .unwrap();
 
-    match { r } {
+    match r {
         Ok(user) => Ok(web::Json(json!({"status": "success", "data": user}))),
         Err(err) => Err(UsersError::UsersServiceError(err)),
     }
@@ -136,9 +136,14 @@ async fn login(
 ) -> Result<impl Responder, UsersError> {
     match data.validate() {
         Ok(_) => {
-            let r = state
-                .users_service
-                .authenticate_user(data.username.clone(), data.password.clone());
+            let inner_state = state.clone();
+            let r = web::block(move || {
+                inner_state
+                    .users_service
+                    .authenticate_user(data.username.clone(), data.password.clone())
+            })
+            .await
+            .unwrap();
             match r {
                 Ok(user) => {
                     let now = Utc::now();
