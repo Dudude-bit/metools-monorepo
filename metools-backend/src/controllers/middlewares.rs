@@ -7,7 +7,7 @@ use jsonwebtoken::{decode, DecodingKey, Validation};
 use serde_json::json;
 
 use crate::controllers::users::TokenClaims;
-use crate::AppState;
+use crate::controllers::schema::AppState;
 
 pub struct UserMiddleware;
 

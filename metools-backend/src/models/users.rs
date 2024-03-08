@@ -1,6 +1,7 @@
 use derive_more::Display;
 use diesel::prelude::*;
 use serde::Serialize;
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::schema::users::dsl::users;
@@ -10,7 +11,7 @@ pub enum UsersDBError {
     UnknownError,
 }
 
-#[derive(Queryable, Selectable, Serialize)]
+#[derive(Queryable, Selectable, Serialize, ToSchema)]
 #[diesel(table_name = crate::schema::users)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct UserReturn {

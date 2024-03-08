@@ -5,4 +5,3 @@ gen-swagger:
 
 fmt:
 	@cargo +nightly fmt && cargo clippy --fix --allow-dirty
-

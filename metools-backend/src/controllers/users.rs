@@ -8,17 +8,19 @@ use derive_more::Display;
 use jsonwebtoken::{encode, EncodingKey, Header};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::{Validate, ValidationErrors};
 
 use crate::services::users::UsersServiceError;
-use crate::AppState;
+use crate::controllers::schema::{AppState, Response};
 use crate::controllers::middlewares::UserMiddleware;
+use crate::models::users::UserReturn;
 
 const TOKEN_COOKIE_FIELD: &str = "token";
 
-#[derive(Deserialize, Validate)]
-struct SignUpData {
+#[derive(Deserialize, Validate, ToSchema)]
+pub struct SignUpData {
     username: String,
     #[validate(email)]
     email: String,
@@ -28,8 +30,8 @@ struct SignUpData {
     repeat_password: String,
 }
 
-#[derive(Deserialize, Validate)]
-struct LoginData {
+#[derive(Deserialize, Validate, ToSchema)]
+pub struct LoginData {
     username: String,
     #[validate(length(min = 8, max = 512))]
     password: String,
@@ -87,23 +89,40 @@ impl ResponseError for UsersError {
     }
 }
 
+#[utoipa::path(
+    responses(
+    (status = OK, description = "OK", body = ResponseMe),
+    (status = UNAUTHORIZED, description = "Unauthorized", body = ErrorResponse),
+    (status = INTERNAL_SERVER_ERROR, description = "Internal server error", body = ErrorResponse)
+    ),
+    tag = "users"
+)]
 #[get("/me")]
 async fn me(
     _: UserMiddleware,
     req: HttpRequest,
     data: web::Data<AppState>,
-) -> Result<impl Responder, UsersError> {
+) -> Result<web::Json<Response<UserReturn>>, UsersError> {
     let user_id = *req.extensions().get::<Uuid>().unwrap();
     let r = web::block(move || data.users_service.get_user_by_id(user_id))
         .await
         .unwrap();
 
     match r {
-        Ok(user) => Ok(web::Json(json!({"status": "success", "data": user}))),
+        Ok(user) => Ok(web::Json(Response {
+            status: "success".to_string(),
+            data: user,
+        })),
         Err(err) => Err(UsersError::UsersServiceError(err)),
     }
 }
 
+#[utoipa::path(
+    responses(
+    (status = OK, description = "OK")
+    ),
+tag = "users"
+)]
 #[post("/signup")]
 async fn signup(
     data: web::Json<SignUpData>,
@@ -129,6 +148,7 @@ async fn signup(
     }
 }
 
+#[utoipa::path(tag = "users")]
 #[post("/login")]
 async fn login(
     data: web::Json<LoginData>,
@@ -144,6 +164,7 @@ async fn login(
             })
             .await
             .unwrap();
+
             match r {
                 Ok(user) => {
                     let now = Utc::now();
@@ -168,9 +189,10 @@ async fn login(
                         .max_age(ActixWebDuration::new((60 * state.jwt_maxage) as i64, 0))
                         .http_only(true)
                         .finish();
-                    Ok(HttpResponse::Ok()
-                        .cookie(cookie)
-                        .json(json!({"status": "success", "data": {"token": token}})))
+                    Ok(HttpResponse::Ok().cookie(cookie).json(Response {
+                        status: "success".to_string(),
+                        data: Some(json!({"token": token})),
+                    }))
                 }
                 Err(err) => Err(UsersError::UsersServiceError(err)),
             }
@@ -181,7 +203,7 @@ async fn login(
 
 #[utoipa::path]
 #[get("/logout")]
-async fn logout_handler(_: UserMiddleware) -> impl Responder {
+async fn logout(_: UserMiddleware) -> impl Responder {
     let cookie = Cookie::build(TOKEN_COOKIE_FIELD, "")
         .path("/")
         .max_age(ActixWebDuration::new(-1, 0))
