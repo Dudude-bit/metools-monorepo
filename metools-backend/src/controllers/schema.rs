@@ -12,7 +12,7 @@ pub struct AppState {
 }
 
 #[derive(Serialize, ToSchema)]
-#[aliases(ResponseMe = Response<UserReturn>)]
+#[aliases(ResponseMe = Response<UserReturn>, ResponseLogin = Response<String>)]
 pub struct Response<T: Serialize> {
     pub status: String,
     pub data: T,

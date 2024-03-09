@@ -18,7 +18,7 @@ use utoipa_swagger_ui::SwaggerUi;
 
 use crate::controllers::schema::AppState;
 use crate::config::Config;
-use crate::controllers::users::{login, logout, me, signup};
+use crate::controllers::users::{login, me, signup};
 use crate::models::DBPool;
 use crate::services::users::UsersService;
 
@@ -28,8 +28,7 @@ use crate::services::users::UsersService;
     paths(
         controllers::users::me,
         controllers::users::login,
-        controllers::users::signup,
-        controllers::users::logout
+        controllers::users::signup
     ),
     components(schemas(
         crate::controllers::users::LoginData,
@@ -75,8 +74,7 @@ async fn main() -> std::io::Result<()> {
                     web::scope("/users")
                         .service(me)
                         .service(login)
-                        .service(signup)
-                        .service(logout),
+                        .service(signup),
                 ),
             )
             .service(

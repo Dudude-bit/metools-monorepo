@@ -26,16 +26,18 @@
           },
           "required": true
         },
-        "responses": {}
-      }
-    },
-    "/logout": {
-      "get": {
-        "tags": [
-          "controllers::users"
-        ],
-        "operationId": "logout",
-        "responses": {}
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseLogin"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/me": {
@@ -131,6 +133,21 @@
             "type": "string"
           },
           "username": {
+            "type": "string"
+          }
+        }
+      },
+      "ResponseLogin": {
+        "type": "object",
+        "required": [
+          "status",
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "string"
+          },
+          "status": {
             "type": "string"
           }
         }

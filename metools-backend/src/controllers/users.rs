@@ -1,5 +1,4 @@
 use actix_web::body::BoxBody;
-use actix_web::cookie::{time::Duration as ActixWebDuration, Cookie};
 use actix_web::http::header::ContentType;
 use actix_web::http::StatusCode;
 use actix_web::{get, post, web, HttpMessage, HttpRequest, HttpResponse, Responder, ResponseError};
@@ -13,9 +12,8 @@ use uuid::Uuid;
 use validator::{Validate, ValidationErrors};
 
 use crate::services::users::UsersServiceError;
-use crate::controllers::schema::{AppState, Response};
+use crate::controllers::schema::{AppState, ResponseLogin, ResponseMe};
 use crate::controllers::middlewares::UserMiddleware;
-use crate::models::users::UserReturn;
 
 const TOKEN_COOKIE_FIELD: &str = "token";
 
@@ -102,14 +100,14 @@ async fn me(
     _: UserMiddleware,
     req: HttpRequest,
     data: web::Data<AppState>,
-) -> Result<web::Json<Response<UserReturn>>, UsersError> {
+) -> Result<web::Json<ResponseMe>, UsersError> {
     let user_id = *req.extensions().get::<Uuid>().unwrap();
     let r = web::block(move || data.users_service.get_user_by_id(user_id))
         .await
         .unwrap();
 
     match r {
-        Ok(user) => Ok(web::Json(Response {
+        Ok(user) => Ok(web::Json(ResponseMe {
             status: "success".to_string(),
             data: user,
         })),
@@ -148,12 +146,17 @@ async fn signup(
     }
 }
 
-#[utoipa::path(tag = "users")]
+#[utoipa::path(
+responses(
+(status = OK, description = "OK", body = ResponseLogin)
+),
+tag = "users")
+]
 #[post("/login")]
 async fn login(
     data: web::Json<LoginData>,
     state: web::Data<AppState>,
-) -> Result<impl Responder, UsersError> {
+) -> Result<web::Json<ResponseLogin>, UsersError> {
     match data.validate() {
         Ok(_) => {
             let inner_state = state.clone();
@@ -183,15 +186,9 @@ async fn login(
                         &EncodingKey::from_secret(state.jwt_secret.as_ref()),
                     )
                     .unwrap();
-
-                    let cookie = Cookie::build(TOKEN_COOKIE_FIELD, token.to_owned())
-                        .path("/")
-                        .max_age(ActixWebDuration::new((60 * state.jwt_maxage) as i64, 0))
-                        .http_only(true)
-                        .finish();
-                    Ok(HttpResponse::Ok().cookie(cookie).json(Response {
+                    Ok(web::Json(ResponseLogin {
                         status: "success".to_string(),
-                        data: Some(json!({"token": token})),
+                        data: token,
                     }))
                 }
                 Err(err) => Err(UsersError::UsersServiceError(err)),
@@ -199,18 +196,4 @@ async fn login(
         }
         Err(err) => Err(UsersError::InvalidInputData(err)),
     }
-}
-
-#[utoipa::path]
-#[get("/logout")]
-async fn logout(_: UserMiddleware) -> impl Responder {
-    let cookie = Cookie::build(TOKEN_COOKIE_FIELD, "")
-        .path("/")
-        .max_age(ActixWebDuration::new(-1, 0))
-        .http_only(true)
-        .finish();
-
-    HttpResponse::Ok()
-        .cookie(cookie)
-        .json(json!({"status": "success"}))
 }
