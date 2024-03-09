@@ -13,5 +13,4 @@ import { useUserStore } from "@/stores/user";
 
 const store = useUserStore()
 
-
 </script>

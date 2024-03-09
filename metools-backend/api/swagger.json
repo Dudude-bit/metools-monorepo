@@ -99,7 +99,14 @@
         },
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseSignUp"
+                }
+              }
+            }
           }
         }
       }
@@ -153,6 +160,21 @@
         }
       },
       "ResponseMe": {
+        "type": "object",
+        "required": [
+          "status",
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/UserReturn"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "ResponseSignUp": {
         "type": "object",
         "required": [
           "status",

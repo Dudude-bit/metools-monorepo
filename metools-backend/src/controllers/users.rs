@@ -1,7 +1,7 @@
 use actix_web::body::BoxBody;
 use actix_web::http::header::ContentType;
 use actix_web::http::StatusCode;
-use actix_web::{get, post, web, HttpMessage, HttpRequest, HttpResponse, Responder, ResponseError};
+use actix_web::{get, post, web, HttpMessage, HttpRequest, HttpResponse, ResponseError};
 use chrono::{Duration, Utc};
 use derive_more::Display;
 use jsonwebtoken::{encode, EncodingKey, Header};
@@ -12,7 +12,7 @@ use uuid::Uuid;
 use validator::{Validate, ValidationErrors};
 
 use crate::services::users::UsersServiceError;
-use crate::controllers::schema::{AppState, ResponseLogin, ResponseMe};
+use crate::controllers::schema::{AppState, ResponseLogin, ResponseMe, ResponseSignUp};
 use crate::controllers::middlewares::UserMiddleware;
 
 const TOKEN_COOKIE_FIELD: &str = "token";
@@ -117,7 +117,7 @@ async fn me(
 
 #[utoipa::path(
     responses(
-    (status = OK, description = "OK")
+    (status = OK, description = "OK", body = ResponseSignUp)
     ),
 tag = "users"
 )]
@@ -125,7 +125,7 @@ tag = "users"
 async fn signup(
     data: web::Json<SignUpData>,
     state: web::Data<AppState>,
-) -> Result<impl Responder, UsersError> {
+) -> Result<web::Json<ResponseSignUp>, UsersError> {
     match data.validate() {
         Ok(_) => {
             let r = web::block(move || {
@@ -138,7 +138,10 @@ async fn signup(
             .await
             .unwrap();
             match r {
-                Ok(user) => Ok(web::Json(json!({"status": "success", "data": user}))),
+                Ok(user) => Ok(web::Json(ResponseSignUp {
+                    status: "success".to_string(),
+                    data: user,
+                })),
                 Err(err) => Err(UsersError::UsersServiceError(err)),
             }
         }
