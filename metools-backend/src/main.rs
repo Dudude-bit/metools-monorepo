@@ -11,14 +11,16 @@ use std::io::Write;
 
 use actix_web::middleware::{Compress, Logger};
 use actix_web::{web, App, HttpServer};
+use controllers::rzd::tasks::list_tasks;
 use diesel::r2d2::ConnectionManager;
 use diesel::{r2d2, PgConnection};
+use services::tasks::TasksService;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
-use crate::controllers::schema::AppState;
 use crate::config::Config;
-use crate::controllers::users::{login, me, signup};
+use crate::controllers::schema::AppState;
+use crate::controllers::users::users::{login, me, signup};
 use crate::models::DBPool;
 use crate::services::users::UsersService;
 
@@ -26,13 +28,13 @@ use crate::services::users::UsersService;
 #[openapi(
     info(description = "Documentation to MeTools API", title = "MeTools"),
     paths(
-        controllers::users::me,
-        controllers::users::login,
-        controllers::users::signup
+        controllers::users::users::me,
+        controllers::users::users::login,
+        controllers::users::users::signup
     ),
     components(schemas(
-        crate::controllers::users::LoginData,
-        crate::controllers::users::SignUpData,
+        crate::controllers::users::users::LoginData,
+        crate::controllers::users::users::SignUpData,
         crate::controllers::schema::ErrorResponse,
         crate::controllers::schema::ResponseMe,
         crate::models::users::UserReturn
@@ -70,12 +72,14 @@ async fn main() -> std::io::Result<()> {
             .expect("failed to create pg pool");
         App::new()
             .service(
-                web::scope("/api/v1").service(
-                    web::scope("/users")
-                        .service(me)
-                        .service(login)
-                        .service(signup),
-                ),
+                web::scope("/api/v1")
+                    .service(
+                        web::scope("/users")
+                            .service(me)
+                            .service(login)
+                            .service(signup),
+                    )
+                    .service(web::scope("/rzd").service(web::scope("/tasks").service(list_tasks))),
             )
             .service(
                 SwaggerUi::new("/swagger/{_:.*}").url("/openapi.json", OpenAPI::openapi().clone()),
@@ -83,7 +87,8 @@ async fn main() -> std::io::Result<()> {
             .wrap(Logger::default())
             .wrap(Compress::default())
             .app_data(web::Data::new(AppState {
-                users_service: UsersService::init(pool),
+                users_service: UsersService::init(pool.clone()),
+                tasks_service: TasksService::init(pool.clone()),
                 jwt_secret: config.jwt_secret.clone(),
                 jwt_maxage: config.jwt_maxage,
             }))

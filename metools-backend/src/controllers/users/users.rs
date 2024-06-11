@@ -11,9 +11,9 @@ use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::{Validate, ValidationErrors};
 
-use crate::services::users::UsersServiceError;
-use crate::controllers::schema::{AppState, ResponseLogin, ResponseMe, ResponseSignUp};
 use crate::controllers::middlewares::UserMiddleware;
+use crate::controllers::schema::{AppState, ResponseLogin, ResponseMe, ResponseSignUp};
+use crate::services::users::UsersServiceError;
 
 const TOKEN_COOKIE_FIELD: &str = "token";
 
@@ -96,7 +96,7 @@ impl ResponseError for UsersError {
     tag = "users"
 )]
 #[get("/me")]
-async fn me(
+pub async fn me(
     _: UserMiddleware,
     req: HttpRequest,
     data: web::Data<AppState>,
@@ -122,7 +122,7 @@ async fn me(
 tag = "users"
 )]
 #[post("/signup")]
-async fn signup(
+pub async fn signup(
     data: web::Json<SignUpData>,
     state: web::Data<AppState>,
 ) -> Result<web::Json<ResponseSignUp>, UsersError> {
@@ -156,7 +156,7 @@ responses(
 tag = "users")
 ]
 #[post("/login")]
-async fn login(
+pub async fn login(
     data: web::Json<LoginData>,
     state: web::Data<AppState>,
 ) -> Result<web::Json<ResponseLogin>, UsersError> {

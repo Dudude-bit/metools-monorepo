@@ -6,8 +6,8 @@ use actix_web::{web, FromRequest, HttpMessage, HttpRequest};
 use jsonwebtoken::{decode, DecodingKey, Validation};
 use serde_json::json;
 
-use crate::controllers::users::TokenClaims;
 use crate::controllers::schema::AppState;
+use crate::controllers::users::users::TokenClaims;
 
 pub struct UserMiddleware;
 

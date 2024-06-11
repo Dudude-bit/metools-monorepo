@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use chrono;
+use derive_more::Display;
 use diesel::prelude::*;
 use diesel::result::Error;
 use serde::{Deserialize, Serialize};
@@ -8,6 +9,11 @@ use serde_json::{json, Value};
 use uuid::Uuid;
 
 use crate::schema::rzd_tasks::dsl::rzd_tasks;
+
+#[derive(Debug, Display)]
+pub enum TasksDBError {
+    UnknownError,
+}
 
 #[derive(Insertable)]
 #[diesel(table_name = crate::schema::rzd_tasks)]
@@ -34,7 +40,7 @@ pub fn insert_new_task(
     task_user_id: Uuid,
     task_type: String,
     task_data: HashMap<String, String>,
-) -> Result<Task, Error> {
+) -> Result<Task, TasksDBError> {
     use crate::schema::rzd_tasks::dsl::*;
 
     let new_task = NewTask {
@@ -49,19 +55,20 @@ pub fn insert_new_task(
         .returning(Task::as_returning())
         .get_result(conn);
 
-    r
+    match r {
+        Ok(tasks) => Ok(tasks),
+        Err(_) => Err(TasksDBError::UnknownError),
+    }
 }
 
 pub fn list_all_tasks(conn: &mut PgConnection) -> Result<Vec<Task>, Error> {
-    let r: QueryResult<Vec<Task>> = rzd_tasks.select(Task::as_select()).load(conn);
-
-    r
+    rzd_tasks.select(Task::as_select()).load(conn)
 }
 
 pub fn list_all_users_tasks(
     conn: &mut PgConnection,
     task_user_id: Uuid,
-) -> Result<Vec<Task>, Error> {
+) -> Result<Vec<Task>, TasksDBError> {
     use crate::schema::rzd_tasks::dsl::*;
 
     let r: QueryResult<Vec<Task>> = rzd_tasks
@@ -69,5 +76,11 @@ pub fn list_all_users_tasks(
         .select(Task::as_select())
         .load(conn);
 
-    r
+    match r {
+        Ok(tasks) => Ok(tasks),
+        Err(err) => {
+            log::error!("Error on list all user tasks: {err}");
+            Err(TasksDBError::UnknownError)
+        }
+    }
 }
