@@ -29,6 +29,11 @@ export interface ResponseMe {
   status: string;
 }
 
+export interface ResponseSignUp {
+  data: UserReturn;
+  status: string;
+}
+
 export interface SignUpData {
   email: string;
   password: string;
@@ -304,11 +309,12 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request POST:/signup
      */
     signup: (data: SignUpData, params: RequestParams = {}) =>
-      this.request<void, any>({
+      this.request<ResponseSignUp, any>({
         path: `/signup`,
         method: "POST",
         body: data,
         type: ContentType.Json,
+        format: "json",
         ...params,
       }),
   };
