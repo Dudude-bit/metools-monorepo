@@ -11,7 +11,9 @@ use std::io::Write;
 
 use actix_web::middleware::{Compress, Logger};
 use actix_web::{web, App, HttpServer};
-use controllers::rzd::tasks::{create_task, delete_task_by_id_for_user, list_tasks};
+use controllers::rzd::tasks::{
+    create_task, delete_all_tasks_for_user, delete_task_by_id_for_user, list_tasks,
+};
 use diesel::r2d2::ConnectionManager;
 use diesel::{r2d2, PgConnection};
 use services::tasks::TasksService;
@@ -34,6 +36,7 @@ use crate::services::users::UsersService;
         controllers::rzd::tasks::list_tasks,
         controllers::rzd::tasks::create_task,
         controllers::rzd::tasks::delete_task_by_id_for_user,
+        controllers::rzd::tasks::delete_all_tasks_for_user
     ),
     components(schemas(
         crate::controllers::users::users::LoginData,
@@ -44,6 +47,7 @@ use crate::services::users::UsersService;
         crate::controllers::schema::ResponseListTasks,
         crate::controllers::schema::ResponseCreateTask,
         crate::controllers::schema::ResponseDeleteTaskByIdForUser,
+        crate::controllers::schema::ResponseDeleteAllTasksForUser,
         crate::models::users::UserReturn,
         crate::models::rzd::tasks::Task
     ))
@@ -85,6 +89,7 @@ async fn main() -> std::io::Result<()> {
             .service(list_tasks)
             .service(create_task)
             .service(delete_task_by_id_for_user)
+            .service(delete_all_tasks_for_user)
             .service(
                 SwaggerUi::new("/swagger/{_:.*}").url("/openapi.json", OpenAPI::openapi().clone()),
             )

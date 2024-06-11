@@ -161,3 +161,30 @@ pub async fn delete_task_by_id_for_user(
         Err(err) => Err(TasksError::TasksServiceError(err)),
     }
 }
+
+#[utoipa::path(
+    responses(
+    (status = OK, description = "OK", body = ResponseDeleteAllTasksForUser)
+    ),
+    tag = "tasks"
+)]
+#[delete("/api/v1/rzd/tasks")]
+pub async fn delete_all_tasks_for_user(
+    _: UserMiddleware,
+    req: HttpRequest,
+    state: web::Data<AppState>,
+) -> Result<web::Json<ResponseDeleteTaskByIdForUser>, TasksError> {
+    let user_id = *req.extensions().get::<Uuid>().unwrap();
+
+    let r = web::block(move || state.tasks_service.delete_all_tasks_for_user(user_id))
+        .await
+        .unwrap();
+
+    match r {
+        Ok(r) => Ok(web::Json(ResponseDeleteTaskByIdForUser {
+            status: "success".to_string(),
+            data: format!("Successfull deleted {r} tasks"),
+        })),
+        Err(err) => Err(TasksError::TasksServiceError(err)),
+    }
+}

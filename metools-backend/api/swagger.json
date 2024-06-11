@@ -56,6 +56,24 @@
             }
           }
         }
+      },
+      "delete": {
+        "tags": [
+          "tasks"
+        ],
+        "operationId": "delete_all_tasks_for_user",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseDeleteAllTasksForUser"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/rzd/tasks/{task_id}": {
@@ -252,6 +270,21 @@
         "properties": {
           "data": {
             "$ref": "#/components/schemas/Task"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "ResponseDeleteAllTasksForUser": {
+        "type": "object",
+        "required": [
+          "status",
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "string"
           },
           "status": {
             "type": "string"

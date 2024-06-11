@@ -4,7 +4,8 @@ use derive_more::Display;
 use uuid::Uuid;
 
 use crate::models::rzd::tasks::{
-    delete_task_by_id_for_user, insert_new_task, list_all_users_tasks, Task, TasksDBError,
+    delete_all_tasks_for_user, delete_task_by_id_for_user, insert_new_task, list_all_users_tasks,
+    Task, TasksDBError,
 };
 use crate::models::DBPool;
 
@@ -53,6 +54,15 @@ impl TasksService {
 
         match r {
             Ok(()) => Ok(()),
+            Err(err) => Err(TasksServiceError::TasksDBError(err)),
+        }
+    }
+
+    pub fn delete_all_tasks_for_user(&self, user_id: Uuid) -> Result<usize, TasksServiceError> {
+        let r = delete_all_tasks_for_user(&mut self.pool.get().unwrap(), user_id);
+
+        match r {
+            Ok(r) => Ok(r),
             Err(err) => Err(TasksServiceError::TasksDBError(err)),
         }
     }

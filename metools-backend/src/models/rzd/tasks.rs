@@ -9,7 +9,7 @@ use serde_json::{json, Value};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
-use crate::{schema::rzd_tasks::dsl::rzd_tasks};
+use crate::schema::rzd_tasks::dsl::rzd_tasks;
 
 #[derive(Debug, Display)]
 pub enum TasksDBError {
@@ -104,5 +104,17 @@ pub fn delete_task_by_id_for_user(
             }
         }
         Err(err) => Err(TasksDBError::UnknownError),
+    }
+}
+
+pub fn delete_all_tasks_for_user(
+    conn: &mut PgConnection,
+    task_user_id: Uuid,
+) -> Result<usize, TasksDBError> {
+    use crate::schema::rzd_tasks::dsl::*;
+    let r = diesel::delete(rzd_tasks.filter(user_id.eq(task_user_id))).execute(conn);
+    match r {
+        Ok(r) => Ok(r),
+        Err(_) => Err(TasksDBError::UnknownError),
     }
 }
