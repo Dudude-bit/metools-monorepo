@@ -1,4 +1,4 @@
-FROM rust:1.75-slim-buster as build
+FROM rust:1.78-slim-buster as build
 
 # create a new empty shell project
 RUN USER=root cargo new --bin metools_backend
