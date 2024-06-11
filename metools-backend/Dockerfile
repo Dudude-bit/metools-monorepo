@@ -3,7 +3,7 @@ FROM rust:1.78-slim-buster as build
 # create a new empty shell project
 RUN USER=root cargo new --bin metools_backend
 WORKDIR /metools_backend
-RUN apt-get update && apt-get install -y pkg-config libssl-dev clang
+RUN apt-get update && apt-get install -y pkg-config libssl-dev clang curl
 # copy over your manifests
 COPY ./Cargo.lock ./Cargo.lock
 COPY ./Cargo.toml ./Cargo.toml
