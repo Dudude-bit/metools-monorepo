@@ -95,7 +95,7 @@ impl ResponseError for UsersError {
     ),
     tag = "users"
 )]
-#[get("/me")]
+#[get("/api/v1/users/me")]
 pub async fn me(
     _: UserMiddleware,
     req: HttpRequest,
@@ -121,7 +121,7 @@ pub async fn me(
     ),
 tag = "users"
 )]
-#[post("/signup")]
+#[post("/api/v1/users/signup")]
 pub async fn signup(
     data: web::Json<SignUpData>,
     state: web::Data<AppState>,
@@ -155,7 +155,7 @@ responses(
 ),
 tag = "users")
 ]
-#[post("/login")]
+#[post("/api/v1/users/login")]
 pub async fn login(
     data: web::Json<LoginData>,
     state: web::Data<AppState>,

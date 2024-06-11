@@ -6,12 +6,14 @@ use diesel::prelude::*;
 use diesel::result::Error;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
+use utoipa::ToSchema;
 use uuid::Uuid;
 
-use crate::schema::rzd_tasks::dsl::rzd_tasks;
+use crate::{schema::rzd_tasks::dsl::rzd_tasks};
 
 #[derive(Debug, Display)]
 pub enum TasksDBError {
+    NoDeletedTask,
     UnknownError,
 }
 
@@ -24,7 +26,7 @@ struct NewTask {
     type_: String,
     data: Value,
 }
-#[derive(Queryable, Selectable, Serialize, Deserialize, Debug)]
+#[derive(Queryable, Selectable, Serialize, Deserialize, Debug, ToSchema)]
 #[diesel(table_name = crate::schema::rzd_tasks)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Task {
@@ -82,5 +84,25 @@ pub fn list_all_users_tasks(
             log::error!("Error on list all user tasks: {err}");
             Err(TasksDBError::UnknownError)
         }
+    }
+}
+
+pub fn delete_task_by_id_for_user(
+    conn: &mut PgConnection,
+    task_user_id: Uuid,
+    task_id: Uuid,
+) -> Result<(), TasksDBError> {
+    use crate::schema::rzd_tasks::dsl::*;
+    let r = diesel::delete(rzd_tasks.filter(user_id.eq(task_user_id).and(id.eq(task_id))))
+        .execute(conn);
+    match r {
+        Ok(r) => {
+            if r == 0 {
+                Err(TasksDBError::NoDeletedTask)
+            } else {
+                Ok(())
+            }
+        }
+        Err(err) => Err(TasksDBError::UnknownError),
     }
 }

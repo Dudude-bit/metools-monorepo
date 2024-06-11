@@ -9,7 +9,88 @@
     "version": "0.1.0"
   },
   "paths": {
-    "/login": {
+    "/api/v1/rzd/tasks": {
+      "get": {
+        "tags": [
+          "tasks"
+        ],
+        "operationId": "list_tasks",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseListTasks"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "tasks"
+        ],
+        "operationId": "create_task",
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTaskData"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseCreateTask"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/rzd/tasks/{task_id}": {
+      "delete": {
+        "tags": [
+          "tasks"
+        ],
+        "operationId": "delete_task_by_id_for_user",
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "description": "Task id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseDeleteTaskByIdForUser"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/login": {
       "post": {
         "tags": [
           "users"
@@ -40,7 +121,7 @@
         }
       }
     },
-    "/me": {
+    "/api/v1/users/me": {
       "get": {
         "tags": [
           "users"
@@ -80,7 +161,7 @@
         }
       }
     },
-    "/signup": {
+    "/api/v1/users/signup": {
       "post": {
         "tags": [
           "users"
@@ -114,6 +195,24 @@
   },
   "components": {
     "schemas": {
+      "CreateTaskData": {
+        "type": "object",
+        "required": [
+          "task_type",
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "task_type": {
+            "type": "string"
+          }
+        }
+      },
       "ErrorResponse": {
         "type": "object",
         "required": [
@@ -140,6 +239,54 @@
             "type": "string"
           },
           "username": {
+            "type": "string"
+          }
+        }
+      },
+      "ResponseCreateTask": {
+        "type": "object",
+        "required": [
+          "status",
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/Task"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "ResponseDeleteTaskByIdForUser": {
+        "type": "object",
+        "required": [
+          "status",
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "ResponseListTasks": {
+        "type": "object",
+        "required": [
+          "status",
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Task"
+            }
+          },
+          "status": {
             "type": "string"
           }
         }
@@ -209,6 +356,34 @@
           },
           "username": {
             "type": "string"
+          }
+        }
+      },
+      "Task": {
+        "type": "object",
+        "required": [
+          "id",
+          "created_at",
+          "type_",
+          "data",
+          "user_id"
+        ],
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "data": {},
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type_": {
+            "type": "string"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       },

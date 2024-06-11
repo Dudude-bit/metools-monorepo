@@ -11,7 +11,7 @@ use std::io::Write;
 
 use actix_web::middleware::{Compress, Logger};
 use actix_web::{web, App, HttpServer};
-use controllers::rzd::tasks::list_tasks;
+use controllers::rzd::tasks::{create_task, delete_task_by_id_for_user, list_tasks};
 use diesel::r2d2::ConnectionManager;
 use diesel::{r2d2, PgConnection};
 use services::tasks::TasksService;
@@ -30,14 +30,22 @@ use crate::services::users::UsersService;
     paths(
         controllers::users::users::me,
         controllers::users::users::login,
-        controllers::users::users::signup
+        controllers::users::users::signup,
+        controllers::rzd::tasks::list_tasks,
+        controllers::rzd::tasks::create_task,
+        controllers::rzd::tasks::delete_task_by_id_for_user,
     ),
     components(schemas(
         crate::controllers::users::users::LoginData,
         crate::controllers::users::users::SignUpData,
+        crate::controllers::rzd::tasks::CreateTaskData,
         crate::controllers::schema::ErrorResponse,
         crate::controllers::schema::ResponseMe,
-        crate::models::users::UserReturn
+        crate::controllers::schema::ResponseListTasks,
+        crate::controllers::schema::ResponseCreateTask,
+        crate::controllers::schema::ResponseDeleteTaskByIdForUser,
+        crate::models::users::UserReturn,
+        crate::models::rzd::tasks::Task
     ))
 )]
 struct OpenAPI;
@@ -71,16 +79,12 @@ async fn main() -> std::io::Result<()> {
             .build(manager)
             .expect("failed to create pg pool");
         App::new()
-            .service(
-                web::scope("/api/v1")
-                    .service(
-                        web::scope("/users")
-                            .service(me)
-                            .service(login)
-                            .service(signup),
-                    )
-                    .service(web::scope("/rzd").service(web::scope("/tasks").service(list_tasks))),
-            )
+            .service(me)
+            .service(login)
+            .service(signup)
+            .service(list_tasks)
+            .service(create_task)
+            .service(delete_task_by_id_for_user)
             .service(
                 SwaggerUi::new("/swagger/{_:.*}").url("/openapi.json", OpenAPI::openapi().clone()),
             )

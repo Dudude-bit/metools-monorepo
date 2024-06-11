@@ -15,7 +15,7 @@ pub struct AppState {
 }
 
 #[derive(Serialize, ToSchema)]
-#[aliases(ResponseMe = Response<UserReturn>, ResponseLogin = Response<String>, ResponseSignUp = Response<UserReturn>, ResponseListTasks = Response<Vec<Task>>)]
+#[aliases(ResponseMe = Response<UserReturn>, ResponseLogin = Response<String>, ResponseSignUp = Response<UserReturn>, ResponseListTasks = Response<Vec<Task>>, ResponseCreateTask = Response<Task>, ResponseDeleteTaskByIdForUser = Response<String>)]
 pub struct Response<T: Serialize> {
     pub status: String,
     pub data: T,

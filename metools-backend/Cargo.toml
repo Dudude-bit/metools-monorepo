@@ -7,9 +7,23 @@ edition = "2021"
 
 [dependencies]
 actix-web = "4.5.1"
-diesel = { version = "2.1.4", features = ["postgres", "postgres_backend", "extras", "without-deprecated"]}
-utoipa = { version = "4", features = ["actix_extras", "chrono", "time", "decimal", "uuid", "url", "openapi_extensions", "non_strict_integers"] }
-utoipa-swagger-ui = { version = "6.0.0" , features = ["actix-web"] }
+diesel = { version = "2.1.4", features = [
+    "postgres",
+    "postgres_backend",
+    "extras",
+    "without-deprecated",
+] }
+utoipa = { version = "4", features = [
+    "actix_extras",
+    "chrono",
+    "time",
+    "decimal",
+    "uuid",
+    "url",
+    "openapi_extensions",
+    "non_strict_integers",
+] }
+utoipa-swagger-ui = { version = "7.1.0", features = ["actix-web"] }
 uuid = { version = "1.7.0", features = ["default", "serde", "v4", "fast-rng"] }
 serde = { version = "1.0.197", features = ["default"] }
 serde_json = { version = "1.0.114", features = ["default"] }
