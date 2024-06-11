@@ -10,7 +10,8 @@ use std::fs::File;
 use std::io::Write;
 
 use actix_web::middleware::{Compress, Logger};
-use actix_web::{web, App, HttpServer};
+use actix_web::{web, App, HttpResponse, HttpServer};
+use actix_web_prometheus::PrometheusMetricsBuilder;
 use controllers::rzd::tasks::{
     create_task, delete_all_tasks_for_user, delete_task_by_id_for_user, list_tasks,
 };
@@ -54,6 +55,10 @@ use crate::services::users::UsersService;
 )]
 struct OpenAPI;
 
+async fn health() -> HttpResponse {
+    HttpResponse::Ok().finish()
+}
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     if env::args().len() > 1 {
@@ -77,6 +82,11 @@ async fn main() -> std::io::Result<()> {
     env_logger::init();
     let config = Config::init();
 
+    let prometheus = PrometheusMetricsBuilder::new("api")
+        .endpoint("/metrics")
+        .build()
+        .unwrap();
+
     HttpServer::new(move || {
         let manager = ConnectionManager::<PgConnection>::new(config.db_url.clone());
         let pool: DBPool = r2d2::Pool::builder()
@@ -93,8 +103,10 @@ async fn main() -> std::io::Result<()> {
             .service(
                 SwaggerUi::new("/swagger/{_:.*}").url("/openapi.json", OpenAPI::openapi().clone()),
             )
+            .service(web::resource("/healthz").to(health))
             .wrap(Logger::default())
             .wrap(Compress::default())
+            .wrap(prometheus.clone())
             .app_data(web::Data::new(AppState {
                 users_service: UsersService::init(pool.clone()),
                 tasks_service: TasksService::init(pool.clone()),
