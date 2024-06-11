@@ -26,4 +26,4 @@ RUN apt-get update && apt-get install -y libssl-dev ca-certificates && update-ca
 WORKDIR /app
 COPY --from=build /metools_backend/target/release/metools_backend .
 # set the startup command to run your binary
-CMD ["./metools_backend"]
+CMD ["diesel migration run --locked-schema;./metools_backend"]

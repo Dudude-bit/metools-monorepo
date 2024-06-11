@@ -1,4 +1,4 @@
-DATABASE_URL ?= postgres://postgres:postgres@localhost:8000/metools/
+DATABASE_URL ?= postgres://postgres:postgres@localhost:5432/metools
 JWT_SECRET ?= 123
 JWT_MAXAGE ?= 6000
 
