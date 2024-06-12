@@ -12,7 +12,7 @@ pub struct Config {
 impl Config {
     pub fn init() -> Self {
         let http_address = env::var("HTTP_ADDRESS").unwrap_or(String::from("127.0.0.1:8000"));
-        let db_url = env::var("DB_URL").unwrap_or(String::from(
+        let db_url = env::var("DATABASE_URL").unwrap_or(String::from(
             "postgresql://postgres:postgres@localhost:5432/metools",
         ));
         let jwt_secret = env::var("JWT_SECRET").expect("JWT_SECRET must be set");
