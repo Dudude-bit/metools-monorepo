@@ -1,14 +1,12 @@
 use std::future::{ready, Ready};
 
+use crate::controllers::schema::AppState;
+use crate::controllers::users::users::TokenClaims;
 use actix_web::error::ErrorUnauthorized;
 use actix_web::{dev::Payload, Error as ActixWebError};
 use actix_web::{web, FromRequest, HttpMessage, HttpRequest};
-use diesel::IntoSql;
 use jsonwebtoken::{decode, DecodingKey, Validation};
 use serde_json::json;
-
-use crate::controllers::schema::AppState;
-use crate::controllers::users::users::TokenClaims;
 
 pub struct UserMiddleware;
 
