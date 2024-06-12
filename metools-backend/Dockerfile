@@ -25,6 +25,6 @@ RUN apt-get update && apt-get install -y libssl-dev ca-certificates libcrypto++-
 # copy the build artifact from the build stage
 WORKDIR /app
 COPY --from=build /metools_backend/target/release/metools_backend .
-RUN cargo install --features postgres diesel_cli
+RUN cargo install postgres diesel_cli --no-default-features --features postgres
 # set the startup command to run your binary
 CMD ["diesel migration run --locked-schema;./metools_backend"]
