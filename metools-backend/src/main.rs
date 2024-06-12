@@ -83,7 +83,6 @@ async fn main() -> std::io::Result<()> {
         }
         return Ok(());
     }
-
     env::set_var("RUST_LOG", "debug");
 
     env_logger::init();

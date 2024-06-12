@@ -15,8 +15,6 @@ use crate::controllers::middlewares::UserMiddleware;
 use crate::controllers::schema::{AppState, ResponseLogin, ResponseMe, ResponseSignUp};
 use crate::services::users::UsersServiceError;
 
-const TOKEN_COOKIE_FIELD: &str = "token";
-
 #[derive(Deserialize, Validate, ToSchema)]
 pub struct SignUpData {
     username: String,
