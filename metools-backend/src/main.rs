@@ -17,6 +17,7 @@ use controllers::rzd::tasks::{
 };
 use diesel::r2d2::ConnectionManager;
 use diesel::{r2d2, PgConnection};
+use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use services::tasks::TasksService;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
@@ -59,6 +60,12 @@ async fn health() -> HttpResponse {
     HttpResponse::Ok().finish()
 }
 
+pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!();
+
+fn run_migrations(conn: &mut PgConnection) {
+    conn.run_pending_migrations(MIGRATIONS).unwrap();
+}
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     if env::args().len() > 1 {
@@ -92,6 +99,9 @@ async fn main() -> std::io::Result<()> {
         let pool: DBPool = r2d2::Pool::builder()
             .build(manager)
             .expect("failed to create pg pool");
+        if config.run_migrations {
+            run_migrations(&mut pool.get().unwrap());
+        }
         App::new()
             .service(me)
             .service(login)

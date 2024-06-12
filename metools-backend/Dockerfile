@@ -25,6 +25,5 @@ RUN apt-get update && apt-get install -y libssl-dev ca-certificates libcrypto++-
 # copy the build artifact from the build stage
 WORKDIR /app
 COPY --from=build /metools_backend/target/release/metools_backend .
-RUN curl --proto '=https' --tlsv1.2 -LsSf https://github.com/diesel-rs/diesel/releases/download/v2.2.0/diesel_cli-installer.sh | sh
 # set the startup command to run your binary
 CMD ["diesel migration run --locked-schema;./metools_backend"]

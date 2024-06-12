@@ -6,6 +6,7 @@ pub struct Config {
     pub http_address: String,
     pub jwt_secret: String,
     pub jwt_maxage: i32,
+    pub run_migrations: bool,
 }
 
 impl Config {
@@ -16,12 +17,14 @@ impl Config {
         ));
         let jwt_secret = env::var("JWT_SECRET").expect("JWT_SECRET must be set");
         let jwt_maxage = env::var("JWT_MAXAGE").expect("JWT_MAXAGE must be set"); // In minutes
+        let run_migrations = env::var("RUN_MIGRATIONS").unwrap_or(String::from("false"));
 
         Self {
             db_url,
             http_address,
             jwt_secret,
             jwt_maxage: jwt_maxage.parse::<i32>().unwrap(),
+            run_migrations: run_migrations.parse::<bool>().unwrap(),
         }
     }
 }
