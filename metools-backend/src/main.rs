@@ -92,7 +92,6 @@ async fn main() -> std::io::Result<()> {
         .endpoint("/metrics")
         .build()
         .unwrap();
-
     HttpServer::new(move || {
         let manager = ConnectionManager::<PgConnection>::new(config.db_url.clone());
         let pool: DBPool = r2d2::Pool::builder()
