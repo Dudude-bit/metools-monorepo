@@ -102,3 +102,20 @@ pub fn get_user_by_id(conn: &mut PgConnection, user_id: Uuid) -> Result<UserRetu
         }
     }
 }
+
+pub fn is_user_verified(conn: &mut PgConnection, user_id: Uuid) -> Result<bool, UsersDBError> {
+    use crate::schema::users::dsl::*;
+
+    let r: QueryResult<bool> = users
+        .filter(id.eq(user_id))
+        .select(is_verified)
+        .get_result(conn);
+
+    match r {
+        Ok(is_user_verified) => Ok(is_user_verified),
+        Err(err) => {
+            log::error!("Error on check if user is_verified by id {err}");
+            Err(UsersDBError::UnknownError)
+        }
+    }
+}

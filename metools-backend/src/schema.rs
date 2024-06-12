@@ -27,6 +27,8 @@ diesel::table! {
         email -> Text,
         password -> Text,
         created_at -> Timestamptz,
+        role -> Text,
+        is_verified -> Bool,
     }
 }
 

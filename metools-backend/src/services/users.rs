@@ -5,8 +5,8 @@ use rand_core::OsRng;
 use uuid::Uuid;
 
 use crate::models::users::{
-    get_user_by_id, get_user_by_username, insert_new_user, GetUserByUsernameReturn, UserReturn,
-    UsersDBError,
+    get_user_by_id, get_user_by_username, insert_new_user, is_user_verified,
+    GetUserByUsernameReturn, UserReturn, UsersDBError,
 };
 use crate::models::DBPool;
 
@@ -82,6 +82,15 @@ impl UsersService {
 
         match r {
             Ok(user) => Ok(user),
+            Err(err) => Err(UsersServiceError::UsersDBError(err)),
+        }
+    }
+
+    pub fn get_user_is_verified(&self, user_id: Uuid) -> Result<bool, UsersServiceError> {
+        let r = is_user_verified(&mut self.pool.get().unwrap(), user_id);
+
+        match r {
+            Ok(is_user_verified) => Ok(is_user_verified),
             Err(err) => Err(UsersServiceError::UsersDBError(err)),
         }
     }

@@ -1,12 +1,13 @@
 use std::future::{ready, Ready};
 
-use crate::controllers::schema::AppState;
-use crate::controllers::users::users::TokenClaims;
-use actix_web::error::ErrorUnauthorized;
+use actix_web::error::{ErrorForbidden, ErrorInternalServerError, ErrorUnauthorized};
 use actix_web::{dev::Payload, Error as ActixWebError};
 use actix_web::{web, FromRequest, HttpMessage, HttpRequest};
 use jsonwebtoken::{decode, DecodingKey, Validation};
 use serde_json::json;
+
+use crate::controllers::schema::AppState;
+use crate::controllers::users::users::TokenClaims;
 
 pub struct UserMiddleware;
 
@@ -46,6 +47,25 @@ impl FromRequest for UserMiddleware {
         };
 
         let user_id = uuid::Uuid::parse_str(claims.sub.as_str()).unwrap();
+        let is_user_verified = req
+            .app_data::<AppState>()
+            .unwrap()
+            .users_service
+            .get_user_is_verified(user_id);
+        match is_user_verified {
+            Ok(is_user_verified) => {
+                if !is_user_verified {
+                    return ready(Err(ErrorForbidden(web::Json(
+                        json!({"status": "not_verified", "error": "User is not verified"}),
+                    ))));
+                }
+            }
+            Err(_) => {
+                return ready(Err(ErrorInternalServerError(web::Json(
+                    json!({"status": "unknown_error", "error": "Unknown error"}),
+                ))))
+            }
+        }
         req.extensions_mut()
             .insert::<uuid::Uuid>(user_id.to_owned());
         ready(Ok(Self))
