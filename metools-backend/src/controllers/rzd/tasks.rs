@@ -9,6 +9,7 @@ use serde::Deserialize;
 use serde_json::json;
 use utoipa::ToSchema;
 use uuid::Uuid;
+use validator::{Validate, ValidationError};
 
 use crate::controllers::middlewares::UserMiddleware;
 use crate::controllers::schema::AppState;
@@ -59,9 +60,58 @@ impl ResponseError for TasksError {
     }
 }
 
-#[derive(Deserialize, ToSchema)]
+pub struct ValidateCreateTaskDataContext(String);
+
+fn validate_create_task_data(
+    data: &HashMap<String, String>,
+    context: &ValidateCreateTaskDataContext,
+) -> Result<(), ValidationError> {
+    match context.0.as_str() {
+        "day" => {
+            if data.keys().len() != 3 {
+                return Err(ValidationError::new("bad_task_data"));
+            }
+            if !data.contains_key("from_point_code") {
+                return Err(ValidationError::new("bad_task_data"));
+            }
+            if !data.contains_key("to_point_code") {
+                return Err(ValidationError::new("bad_task_data"));
+            }
+            if !data.contains_key("date") {
+                return Err(ValidationError::new("bad_task_data"));
+            }
+            Ok(())
+        }
+        "train" => {
+            if data.keys().len() != 5 {
+                return Err(ValidationError::new("bad_task_data"));
+            }
+            if !data.contains_key("from_point_code") {
+                return Err(ValidationError::new("bad_task_data"));
+            }
+            if !data.contains_key("to_point_code") {
+                return Err(ValidationError::new("bad_task_data"));
+            }
+            if !data.contains_key("date") {
+                return Err(ValidationError::new("bad_task_data"));
+            }
+            if !data.contains_key("time") {
+                return Err(ValidationError::new("bad_task_data"));
+            }
+            if !data.contains_key("tnum") {
+                return Err(ValidationError::new("bad_task_data"));
+            }
+            Ok(())
+        }
+        &_ => Err(ValidationError::new("unknown_task_type")),
+    }
+}
+
+#[derive(Deserialize, ToSchema, Validate)]
+#[validate(context = ValidateCreateTaskDataContext)]
 pub struct CreateTaskData {
     task_type: String,
+    #[validate(custom(function = "validate_create_task_data", use_context))]
     data: HashMap<String, String>,
 }
 
@@ -72,7 +122,9 @@ struct DeleteTaskData {
 
 #[utoipa::path(
     responses(
-    (status = OK, description = "OK", body = ResponseListTasks)
+    (status = OK, description = "OK", body = ResponseListTasks),
+    (status = UNAUTHORIZED, description = "Unauthorized", body = ErrorResponse),
+    (status = INTERNAL_SERVER_ERROR, description = "INTERNAL_SERVER_ERROR", body = ErrorResponse)
     ),
 tag = "tasks"
 )]
@@ -99,7 +151,9 @@ pub async fn list_tasks(
 
 #[utoipa::path(
     responses(
-    (status = OK, description = "OK", body = ResponseCreateTask)
+    (status = OK, description = "OK", body = ResponseCreateTask),
+    (status = UNAUTHORIZED, description = "Unauthorized", body = ErrorResponse),
+    (status = INTERNAL_SERVER_ERROR, description = "INTERNAL_SERVER_ERROR", body = ErrorResponse)
     ),
 tag = "tasks"
 )]
@@ -131,7 +185,10 @@ pub async fn create_task(
 
 #[utoipa::path(
     responses(
-    (status = OK, description = "OK", body = ResponseDeleteTaskByIdForUser)
+    (status = OK, description = "OK", body = ResponseDeleteTaskByIdForUser),
+    (status = UNAUTHORIZED, description = "Unauthorized", body = ErrorResponse),
+    (status = NOT_FOUND, description = "Task not found for user", body = ErrorResponse),
+    (status = INTERNAL_SERVER_ERROR, description = "INTERNAL_SERVER_ERROR", body = ErrorResponse)
     ),
     params(("task_id" = Uuid, Path, description = "Task id"),),
     tag = "tasks"
@@ -164,7 +221,9 @@ pub async fn delete_task_by_id_for_user(
 
 #[utoipa::path(
     responses(
-    (status = OK, description = "OK", body = ResponseDeleteAllTasksForUser)
+    (status = OK, description = "OK", body = ResponseDeleteAllTasksForUser),
+    (status = UNAUTHORIZED, description = "Unauthorized", body = ErrorResponse),
+    (status = INTERNAL_SERVER_ERROR, description = "INTERNAL_SERVER_ERROR", body = ErrorResponse)
     ),
     tag = "tasks"
 )]

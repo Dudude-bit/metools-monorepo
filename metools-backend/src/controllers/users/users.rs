@@ -22,7 +22,7 @@ pub struct SignUpData {
     email: String,
     #[validate(length(min = 8, max = 512))]
     password: String,
-    #[validate(must_match = "password")]
+    #[validate(must_match(other = "password"))]
     repeat_password: String,
 }
 
@@ -115,7 +115,8 @@ pub async fn me(
 
 #[utoipa::path(
     responses(
-    (status = OK, description = "OK", body = ResponseSignUp)
+    (status = OK, description = "OK", body = ResponseSignUp),
+    (status = BAD_REQUEST, description = "Data is not valid", body = ErrorResponse)
     ),
 tag = "users"
 )]
@@ -149,7 +150,8 @@ pub async fn signup(
 
 #[utoipa::path(
 responses(
-(status = OK, description = "OK", body = ResponseLogin)
+(status = OK, description = "OK", body = ResponseLogin),
+(status = BAD_REQUEST, description = "Data is not valid", body = ErrorResponse)
 ),
 tag = "users")
 ]
