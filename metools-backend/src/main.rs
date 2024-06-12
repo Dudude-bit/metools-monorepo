@@ -100,7 +100,9 @@ async fn main() -> std::io::Result<()> {
             .build(manager)
             .expect("failed to create pg pool");
         if config.run_migrations {
+            log::info!("Running migrations");
             run_migrations(&mut pool.get().unwrap());
+            log::info!("Ran migrations");
         }
         App::new()
             .service(me)
