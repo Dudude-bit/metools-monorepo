@@ -9,7 +9,7 @@ use serde::Deserialize;
 use serde_json::json;
 use utoipa::ToSchema;
 use uuid::Uuid;
-use validator::{Validate, ValidationError};
+use validator::{Validate, ValidateArgs, ValidationError, ValidationErrors};
 
 use crate::controllers::middlewares::UserMiddleware;
 use crate::controllers::schema::AppState;
@@ -21,12 +21,14 @@ use crate::services::tasks::TasksServiceError;
 
 #[derive(Debug, Display)]
 enum TasksError {
+    InvalidInputData(ValidationErrors),
     TasksServiceError(TasksServiceError),
 }
 
 impl ResponseError for TasksError {
     fn status_code(&self) -> StatusCode {
         match self {
+            Self::InvalidInputData(_) => StatusCode::BAD_REQUEST,
             Self::TasksServiceError(error) => match error {
                 TasksServiceError::TasksDBError(error) => match error {
                     TasksDBError::NoDeletedTask => StatusCode::NOT_FOUND,
@@ -38,6 +40,9 @@ impl ResponseError for TasksError {
     }
     fn error_response(&self) -> HttpResponse<BoxBody> {
         match self {
+            Self::InvalidInputData(_errors) => HttpResponse::build(self.status_code())
+                .insert_header(ContentType::json())
+                .body(json!({"error": "Invalid input data", "status": "invalid_data"}).to_string()),
             Self::TasksServiceError(error) => match error {
                 TasksServiceError::TasksDBError(error) => match error {
                     TasksDBError::NoDeletedTask => HttpResponse::build(self.status_code())
@@ -152,6 +157,7 @@ pub async fn list_tasks(
 #[utoipa::path(
     responses(
     (status = OK, description = "OK", body = ResponseCreateTask),
+    (status = BAD_REQUEST, description = "Data is not valid", body = ErrorResponse),
     (status = UNAUTHORIZED, description = "Unauthorized", body = ErrorResponse),
     (status = INTERNAL_SERVER_ERROR, description = "INTERNAL_SERVER_ERROR", body = ErrorResponse)
     ),
@@ -165,21 +171,27 @@ pub async fn create_task(
     data: web::Json<CreateTaskData>,
 ) -> Result<web::Json<ResponseCreateTask>, TasksError> {
     let user_id = *req.extensions().get::<Uuid>().unwrap();
+    match data.validate_with_args(&ValidateCreateTaskDataContext(data.task_type.clone())) {
+        Ok(_) => {
+            let r = web::block(move || {
+                state.tasks_service.create_task_for_user(
+                    user_id,
+                    data.task_type.clone(),
+                    data.data.clone(),
+                )
+            })
+            .await
+            .unwrap();
 
-    let r = web::block(move || {
-        state
-            .tasks_service
-            .create_task_for_user(user_id, data.task_type.clone(), data.data.clone())
-    })
-    .await
-    .unwrap();
-
-    match r {
-        Ok(task) => Ok(web::Json(ResponseCreateTask {
-            status: "success".to_string(),
-            data: task,
-        })),
-        Err(err) => Err(TasksError::TasksServiceError(err)),
+            match r {
+                Ok(task) => Ok(web::Json(ResponseCreateTask {
+                    status: "success".to_string(),
+                    data: task,
+                })),
+                Err(err) => Err(TasksError::TasksServiceError(err)),
+            }
+        }
+        Err(err) => Err(TasksError::InvalidInputData(err)),
     }
 }
 
