@@ -47,11 +47,7 @@ impl FromRequest for UserMiddleware {
         };
 
         let user_id = uuid::Uuid::parse_str(claims.sub.as_str()).unwrap();
-        let is_user_verified = req
-            .app_data::<AppState>()
-            .unwrap()
-            .users_service
-            .get_user_is_verified(user_id);
+        let is_user_verified = data.users_service.get_user_is_verified(user_id);
         match is_user_verified {
             Ok(is_user_verified) => {
                 if !is_user_verified {
