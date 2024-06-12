@@ -19,6 +19,7 @@ COPY ./src ./src
 RUN rm ./target/release/deps/metools_backend*
 
 COPY diesel.toml .
+COPY ./migrations ./migrations
 RUN cargo build --release
 
 # our final base
