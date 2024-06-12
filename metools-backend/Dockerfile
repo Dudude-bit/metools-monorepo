@@ -17,6 +17,7 @@ COPY ./src ./src
 
 # build for release
 RUN rm ./target/release/deps/metools_backend*
+
 COPY diesel.toml .
 RUN cargo build --release
 
