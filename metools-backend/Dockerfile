@@ -29,4 +29,4 @@ RUN apt-get update && apt-get install -y libssl-dev ca-certificates libcrypto++-
 WORKDIR /app
 COPY --from=build /metools_backend/target/release/metools_backend .
 # set the startup command to run your binary
-CMD ["diesel migration run --locked-schema;./metools_backend"]
+CMD ["./metools_backend"]
