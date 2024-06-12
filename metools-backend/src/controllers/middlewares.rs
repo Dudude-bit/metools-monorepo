@@ -3,6 +3,7 @@ use std::future::{ready, Ready};
 use actix_web::error::ErrorUnauthorized;
 use actix_web::{dev::Payload, Error as ActixWebError};
 use actix_web::{web, FromRequest, HttpMessage, HttpRequest};
+use diesel::IntoSql;
 use jsonwebtoken::{decode, DecodingKey, Validation};
 use serde_json::json;
 
@@ -17,7 +18,7 @@ impl FromRequest for UserMiddleware {
     fn from_request(req: &HttpRequest, _: &mut Payload) -> Self::Future {
         let data = req.app_data::<web::Data<AppState>>().unwrap();
 
-        let token = req.cookie("token").map(|c| c.value().to_string());
+        let token = req.headers().get("X-API-AUTH-TOKEN");
 
         if token.is_none() {
             return ready(Err(ErrorUnauthorized(web::Json(
@@ -25,8 +26,16 @@ impl FromRequest for UserMiddleware {
             ))));
         }
 
+        let token = token.unwrap().to_str();
+
+        if token.is_err() {
+            return ready(Err(ErrorUnauthorized(web::Json(
+                json!({"status": "unauthorized", "error": "Unauthorized"}),
+            ))));
+        }
+
         let claims = match decode::<TokenClaims>(
-            &token.unwrap(),
+            token.unwrap(),
             &DecodingKey::from_secret(data.jwt_secret.as_ref()),
             &Validation::default(),
         ) {
