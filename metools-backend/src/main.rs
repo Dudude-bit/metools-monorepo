@@ -9,6 +9,9 @@ use std::env;
 use std::fs::File;
 use std::io::Write;
 
+use actix_cors::Cors;
+use actix_web::body::MessageBody;
+use actix_web::http::header;
 use actix_web::middleware::{Compress, Logger};
 use actix_web::{web, App, HttpResponse, HttpServer};
 use actix_web_prometheus::PrometheusMetricsBuilder;
@@ -74,7 +77,8 @@ async fn main() -> std::io::Result<()> {
                 let path = env::args().nth(2).expect("Need path parameter");
                 let mut file = File::create(path.clone())
                     .unwrap_or_else(|_| panic!("Cant create file with path {}", path.clone()));
-                file.write_all(OpenAPI::openapi().to_pretty_json().unwrap().as_bytes())
+                let yaml_string = serde_yaml::to_string(&OpenAPI::openapi()).unwrap();
+                file.write_all(&yaml_string.try_into_bytes().unwrap())
                     .unwrap_or_else(|_| panic!("Cant write to file with path {}", path.clone()))
             }
             &_ => {
@@ -102,6 +106,12 @@ async fn main() -> std::io::Result<()> {
             run_migrations(&mut pool.get().unwrap());
             log::info!("Ran migrations");
         }
+        let cors = Cors::default()
+            .allowed_methods(vec!["GET", "POST", "PUT", "PATCH", "DELETE"])
+            .send_wildcard()
+            .allowed_headers(vec![header::AUTHORIZATION, header::ACCEPT])
+            .allowed_header(header::CONTENT_TYPE)
+            .max_age(3600);
         App::new()
             .service(me)
             .service(login)
@@ -117,6 +127,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(Logger::default())
             .wrap(Compress::default())
             .wrap(prometheus.clone())
+            .wrap(cors)
             .app_data(web::Data::new(AppState {
                 users_service: UsersService::init(pool.clone()),
                 tasks_service: TasksService::init(pool.clone()),

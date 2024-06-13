@@ -28,6 +28,7 @@ utoipa-swagger-ui = { version = "7.1.0", features = ["actix-web"] }
 uuid = { version = "1.7.0", features = ["default", "serde", "v4", "fast-rng"] }
 serde = { version = "1.0.197", features = ["default"] }
 serde_json = { version = "1.0.114", features = ["default"] }
+serde_yaml = { version = "0.9.34" }
 serde_with = { version = "3.6.1", features = ["default"] }
 chrono = { version = "0.4.34", features = ["default", "serde"] }
 log = "0.4.20"
@@ -39,5 +40,6 @@ validator = { version = "0.18.1", features = ["derive"] }
 derive_more = { version = "0.99.17", features = ["default"] }
 prometheus = { version = "0.13.4", features = ["process"] }
 actix-web-prometheus = { version = "0.1.0-beta.8", features = ["process"] }
+actix-cors = "0.7.0"
 
 [dev-dependencies]

@@ -8,7 +8,7 @@ gen-db-schema:
 	@DATABASE_URL=${DATABASE_URL} diesel migration run
 .PHONY: gen-swagger
 gen-swagger:
-	@cargo run gen-swagger api/swagger.json
+	@cargo run gen-swagger api/swagger.yaml
 .PHONY: fmt
 fmt:
 	@cargo +nightly fmt && cargo clippy --fix --allow-dirty
