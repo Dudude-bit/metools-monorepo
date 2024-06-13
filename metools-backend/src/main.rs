@@ -91,11 +91,6 @@ async fn main() -> std::io::Result<()> {
 
     env_logger::init();
     let config = Config::init();
-
-    let prometheus = PrometheusMetricsBuilder::new("api")
-        .endpoint("/metrics")
-        .build()
-        .unwrap();
     HttpServer::new(move || {
         let manager = ConnectionManager::<PgConnection>::new(config.db_url.clone());
         let pool: DBPool = r2d2::Pool::builder()
@@ -112,6 +107,10 @@ async fn main() -> std::io::Result<()> {
             .allow_any_header()
             .expose_any_header()
             .max_age(3600);
+        let prometheus = PrometheusMetricsBuilder::new("api")
+            .endpoint("/metrics")
+            .build()
+            .unwrap();
         App::new()
             .service(me)
             .service(login)
@@ -126,7 +125,7 @@ async fn main() -> std::io::Result<()> {
             .service(web::resource("/healthz").to(health))
             .wrap(Logger::default())
             .wrap(Compress::default())
-            .wrap(prometheus.clone())
+            .wrap(prometheus)
             .wrap(cors)
             .app_data(web::Data::new(AppState {
                 users_service: UsersService::init(pool.clone()),
