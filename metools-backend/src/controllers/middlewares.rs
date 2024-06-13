@@ -2,14 +2,17 @@ use std::future::{ready, Ready};
 
 use actix_web::error::{ErrorForbidden, ErrorInternalServerError, ErrorUnauthorized};
 use actix_web::{dev::Payload, Error as ActixWebError};
-use actix_web::{web, FromRequest, HttpMessage, HttpRequest};
+use actix_web::{web, FromRequest, HttpRequest};
 use jsonwebtoken::{decode, DecodingKey, Validation};
 use serde_json::json;
+use uuid::Uuid;
 
 use crate::controllers::schema::AppState;
 use crate::controllers::users::users::TokenClaims;
 
-pub struct UserMiddleware;
+pub struct UserMiddleware {
+    pub user_id: Uuid,
+}
 
 impl FromRequest for UserMiddleware {
     type Error = ActixWebError;
@@ -62,8 +65,8 @@ impl FromRequest for UserMiddleware {
                 ))))
             }
         }
-        req.extensions_mut()
-            .insert::<uuid::Uuid>(user_id.to_owned());
-        ready(Ok(Self))
+        ready(Ok(Self {
+            user_id: user_id.to_owned(),
+        }))
     }
 }

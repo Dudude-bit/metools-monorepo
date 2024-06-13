@@ -126,6 +126,7 @@ struct DeleteTaskData {
 }
 
 #[utoipa::path(
+    params(("X-API-AUTH-TOKEN" = Uuid, Header, description = "Auth token"),),
     responses(
     (status = OK, description = "OK", body = ResponseListTasks),
     (status = UNAUTHORIZED, description = "Unauthorized", body = ErrorResponse),
@@ -135,11 +136,10 @@ tag = "tasks"
 )]
 #[get("/api/v1/rzd/tasks")]
 pub async fn list_tasks(
-    _: UserMiddleware,
-    req: HttpRequest,
+    user: UserMiddleware,
     state: web::Data<AppState>,
 ) -> Result<web::Json<ResponseListTasks>, TasksError> {
-    let user_id = *req.extensions().get::<Uuid>().unwrap();
+    let user_id = user.user_id;
 
     let r = web::block(move || state.tasks_service.list_tasks_for_user(user_id))
         .await
@@ -155,6 +155,7 @@ pub async fn list_tasks(
 }
 
 #[utoipa::path(
+    params(("X-API-AUTH-TOKEN" = Uuid, Header, description = "Auth token"),),
     responses(
     (status = OK, description = "OK", body = ResponseCreateTask),
     (status = BAD_REQUEST, description = "Data is not valid", body = ErrorResponse),
@@ -165,12 +166,11 @@ tag = "tasks"
 )]
 #[post("/api/v1/rzd/tasks")]
 pub async fn create_task(
-    _: UserMiddleware,
-    req: HttpRequest,
+    user: UserMiddleware,
     state: web::Data<AppState>,
     data: web::Json<CreateTaskData>,
 ) -> Result<web::Json<ResponseCreateTask>, TasksError> {
-    let user_id = *req.extensions().get::<Uuid>().unwrap();
+    let user_id = user.user_id;
     match data.validate_with_args(&ValidateCreateTaskDataContext(data.task_type.clone())) {
         Ok(_) => {
             let r = web::block(move || {
@@ -196,23 +196,22 @@ pub async fn create_task(
 }
 
 #[utoipa::path(
+    params(("task_id" = Uuid, Path, description = "Task id"),("X-API-AUTH-TOKEN" = Uuid, Header, description = "Auth token"),),
     responses(
     (status = OK, description = "OK", body = ResponseDeleteTaskByIdForUser),
     (status = UNAUTHORIZED, description = "Unauthorized", body = ErrorResponse),
     (status = NOT_FOUND, description = "Task not found for user", body = ErrorResponse),
     (status = INTERNAL_SERVER_ERROR, description = "INTERNAL_SERVER_ERROR", body = ErrorResponse)
     ),
-    params(("task_id" = Uuid, Path, description = "Task id"),),
     tag = "tasks"
 )]
 #[delete("/api/v1/rzd/tasks/{task_id}")]
 pub async fn delete_task_by_id_for_user(
-    _: UserMiddleware,
-    req: HttpRequest,
+    user: UserMiddleware,
     state: web::Data<AppState>,
     data: web::Path<DeleteTaskData>,
 ) -> Result<web::Json<ResponseDeleteTaskByIdForUser>, TasksError> {
-    let user_id = *req.extensions().get::<Uuid>().unwrap();
+    let user_id = user.user_id;
 
     let r = web::block(move || {
         state
@@ -232,6 +231,7 @@ pub async fn delete_task_by_id_for_user(
 }
 
 #[utoipa::path(
+    params(("X-API-AUTH-TOKEN" = Uuid, Header, description = "Auth token"),),
     responses(
     (status = OK, description = "OK", body = ResponseDeleteAllTasksForUser),
     (status = UNAUTHORIZED, description = "Unauthorized", body = ErrorResponse),
@@ -241,11 +241,10 @@ pub async fn delete_task_by_id_for_user(
 )]
 #[delete("/api/v1/rzd/tasks")]
 pub async fn delete_all_tasks_for_user(
-    _: UserMiddleware,
-    req: HttpRequest,
+    user: UserMiddleware,
     state: web::Data<AppState>,
 ) -> Result<web::Json<ResponseDeleteTaskByIdForUser>, TasksError> {
-    let user_id = *req.extensions().get::<Uuid>().unwrap();
+    let user_id = user.user_id;
 
     let r = web::block(move || state.tasks_service.delete_all_tasks_for_user(user_id))
         .await

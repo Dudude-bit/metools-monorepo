@@ -15,6 +15,18 @@
           "tasks"
         ],
         "operationId": "list_tasks",
+        "parameters": [
+          {
+            "name": "X-API-AUTH-TOKEN",
+            "in": "header",
+            "description": "Auth token",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK",
@@ -53,6 +65,18 @@
           "tasks"
         ],
         "operationId": "create_task",
+        "parameters": [
+          {
+            "name": "X-API-AUTH-TOKEN",
+            "in": "header",
+            "description": "Auth token",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "requestBody": {
           "description": "",
           "content": {
@@ -112,6 +136,18 @@
           "tasks"
         ],
         "operationId": "delete_all_tasks_for_user",
+        "parameters": [
+          {
+            "name": "X-API-AUTH-TOKEN",
+            "in": "header",
+            "description": "Auth token",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK",
@@ -157,6 +193,16 @@
             "name": "task_id",
             "in": "path",
             "description": "Task id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "X-API-AUTH-TOKEN",
+            "in": "header",
+            "description": "Auth token",
             "required": true,
             "schema": {
               "type": "string",
@@ -255,6 +301,18 @@
           "users"
         ],
         "operationId": "me",
+        "parameters": [
+          {
+            "name": "X-API-AUTH-TOKEN",
+            "in": "header",
+            "description": "Auth token",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK",

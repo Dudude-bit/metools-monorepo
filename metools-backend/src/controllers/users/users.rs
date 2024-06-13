@@ -86,6 +86,7 @@ impl ResponseError for UsersError {
 }
 
 #[utoipa::path(
+    params(("X-API-AUTH-TOKEN" = Uuid, Header, description = "Auth token"),),
     responses(
     (status = OK, description = "OK", body = ResponseMe),
     (status = UNAUTHORIZED, description = "Unauthorized", body = ErrorResponse),
@@ -95,11 +96,10 @@ impl ResponseError for UsersError {
 )]
 #[get("/api/v1/users/me")]
 pub async fn me(
-    _: UserMiddleware,
-    req: HttpRequest,
+    user: UserMiddleware,
     data: web::Data<AppState>,
 ) -> Result<web::Json<ResponseMe>, UsersError> {
-    let user_id = *req.extensions().get::<Uuid>().unwrap();
+    let user_id = user.user_id;
     let r = web::block(move || data.users_service.get_user_by_id(user_id))
         .await
         .unwrap();
