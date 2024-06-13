@@ -107,10 +107,10 @@ async fn main() -> std::io::Result<()> {
             log::info!("Ran migrations");
         }
         let cors = Cors::default()
-            .allowed_methods(vec!["GET", "POST", "PUT", "PATCH", "DELETE"])
-            .send_wildcard()
-            .allowed_headers(vec![header::AUTHORIZATION, header::ACCEPT])
-            .allowed_header(header::CONTENT_TYPE)
+            .allow_any_origin()
+            .allow_any_method()
+            .allow_any_header()
+            .expose_any_header()
             .max_age(3600);
         App::new()
             .service(me)
