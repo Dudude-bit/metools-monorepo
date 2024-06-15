@@ -79,7 +79,9 @@ impl UsersService {
 
                 let r_verify_token = r_verify_token.unwrap();
 
-                let r_email = self.mailer.send_verification_mail(email, r_verify_token.id);
+                let r_email = self
+                    .mailer
+                    .send_verification_mail(email, r_verify_token.token);
                 match r_email {
                     Ok(_) => Ok(r_user),
                     Err(err) => {
