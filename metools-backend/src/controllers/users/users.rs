@@ -157,7 +157,7 @@ pub async fn signup(
     }
 }
 
-#[post("/api/v1/users/verify")]
+#[get("/api/v1/users/verify")]
 pub async fn verify_user(
     verify_key: web::Query<Uuid>,
     redirect: web::Query<String>,
