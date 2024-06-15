@@ -90,16 +90,16 @@ async fn main() -> std::io::Result<()> {
 
     env_logger::init();
     let config = Config::init();
+    let manager = ConnectionManager::<PgConnection>::new(config.db_url.clone());
+    let pool: DBPool = r2d2::Pool::builder()
+        .build(manager)
+        .expect("failed to create pg pool");
+    if config.run_migrations {
+        log::info!("Running migrations");
+        run_migrations(&mut pool.get().unwrap());
+        log::info!("Ran migrations");
+    }
     HttpServer::new(move || {
-        let manager = ConnectionManager::<PgConnection>::new(config.db_url.clone());
-        let pool: DBPool = r2d2::Pool::builder()
-            .build(manager)
-            .expect("failed to create pg pool");
-        if config.run_migrations {
-            log::info!("Running migrations");
-            run_migrations(&mut pool.get().unwrap());
-            log::info!("Ran migrations");
-        }
         let cors = Cors::default()
             .allow_any_origin()
             .allow_any_method()
