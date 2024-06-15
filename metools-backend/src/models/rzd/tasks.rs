@@ -2,8 +2,7 @@ use std::collections::HashMap;
 
 use chrono;
 use derive_more::Display;
-use diesel::prelude::*;
-use diesel::result::Error;
+use diesel::{prelude::*, result::Error};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use utoipa::ToSchema;
@@ -14,7 +13,7 @@ use crate::schema::rzd_tasks::dsl::rzd_tasks;
 #[derive(Debug, Display)]
 pub enum TasksDBError {
     NoDeletedTask,
-    UnknownError,
+    UnknownError(Error),
 }
 
 #[derive(Insertable)]
@@ -59,12 +58,17 @@ pub fn insert_new_task(
 
     match r {
         Ok(tasks) => Ok(tasks),
-        Err(_) => Err(TasksDBError::UnknownError),
+        Err(err) => Err(TasksDBError::UnknownError(err)),
     }
 }
 
-pub fn list_all_tasks(conn: &mut PgConnection) -> Result<Vec<Task>, Error> {
-    rzd_tasks.select(Task::as_select()).load(conn)
+pub fn list_all_tasks(conn: &mut PgConnection) -> Result<Vec<Task>, TasksDBError> {
+    let r = rzd_tasks.select(Task::as_select()).load(conn);
+
+    match r {
+        Ok(tasks) => Ok(tasks),
+        Err(err) => Err(TasksDBError::UnknownError(err)),
+    }
 }
 
 pub fn list_all_users_tasks(
@@ -80,10 +84,7 @@ pub fn list_all_users_tasks(
 
     match r {
         Ok(tasks) => Ok(tasks),
-        Err(err) => {
-            log::error!("Error on list all user tasks: {err}");
-            Err(TasksDBError::UnknownError)
-        }
+        Err(err) => Err(TasksDBError::UnknownError(err)),
     }
 }
 
@@ -103,7 +104,7 @@ pub fn delete_task_by_id_for_user(
                 Ok(())
             }
         }
-        Err(err) => Err(TasksDBError::UnknownError),
+        Err(err) => Err(TasksDBError::UnknownError(err)),
     }
 }
 
@@ -115,6 +116,6 @@ pub fn delete_all_tasks_for_user(
     let r = diesel::delete(rzd_tasks.filter(user_id.eq(task_user_id))).execute(conn);
     match r {
         Ok(r) => Ok(r),
-        Err(_) => Err(TasksDBError::UnknownError),
+        Err(err) => Err(TasksDBError::UnknownError(err)),
     }
 }

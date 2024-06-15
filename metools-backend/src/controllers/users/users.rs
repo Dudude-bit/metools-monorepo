@@ -1,7 +1,7 @@
 use actix_web::body::BoxBody;
 use actix_web::http::header::ContentType;
 use actix_web::http::StatusCode;
-use actix_web::{get, post, web, HttpMessage, HttpRequest, HttpResponse, ResponseError};
+use actix_web::{get, post, web, HttpResponse, ResponseError};
 use chrono::{Duration, Utc};
 use derive_more::Display;
 use jsonwebtoken::{encode, EncodingKey, Header};
@@ -54,6 +54,7 @@ impl ResponseError for UsersError {
             Self::UsersServiceError(service_err) => match service_err {
                 UsersServiceError::UsersDBError(_) => StatusCode::INTERNAL_SERVER_ERROR,
                 UsersServiceError::InvalidUserPassword => StatusCode::UNAUTHORIZED,
+                UsersServiceError::VerifyTokensDBError(_) => StatusCode::INTERNAL_SERVER_ERROR,
                 UsersServiceError::UnknownError => StatusCode::INTERNAL_SERVER_ERROR,
             },
             Self::UnknownError => StatusCode::INTERNAL_SERVER_ERROR,
@@ -68,6 +69,14 @@ impl ResponseError for UsersError {
                 UsersServiceError::UsersDBError(_) => HttpResponse::build(self.status_code())
                     .insert_header(ContentType::json())
                     .body(json!({"error": "Unknown error", "status": "unknown_error"}).to_string()),
+                UsersServiceError::VerifyTokensDBError(_) => {
+                    HttpResponse::build(self.status_code())
+                        .insert_header(ContentType::json())
+                        .body(
+                            json!({"error": "Unknown error", "status": "unknown_error"})
+                                .to_string(),
+                        )
+                }
                 UsersServiceError::InvalidUserPassword => HttpResponse::build(self.status_code())
                     .insert_header(ContentType::json())
                     .body(
@@ -145,6 +154,22 @@ pub async fn signup(
             }
         }
         Err(err) => Err(UsersError::InvalidInputData(err)),
+    }
+}
+
+#[post("/api/v1/users/verify")]
+pub async fn verify_user(
+    verify_key: web::Query<Uuid>,
+    redirect: web::Query<String>,
+    state: web::Data<AppState>,
+) -> Result<web::Redirect, UsersError> {
+    let r = web::block(move || state.users_service.verify_user(verify_key.0))
+        .await
+        .unwrap();
+
+    match r {
+        Ok(()) => Ok(web::Redirect::to(redirect.0).permanent()),
+        Err(err) => Err(UsersError::UsersServiceError(err)),
     }
 }
 

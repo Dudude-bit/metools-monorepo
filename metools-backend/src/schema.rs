@@ -32,7 +32,18 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    verify_tokens (id) {
+        id -> Uuid,
+        created_at -> Timestamptz,
+        valid_until -> Timestamptz,
+        token -> Uuid,
+        user_id -> Uuid,
+    }
+}
+
 diesel::joinable!(rzd_tasks -> users (user_id));
 diesel::joinable!(tokens -> users (user_id));
+diesel::joinable!(verify_tokens -> users (user_id));
 
-diesel::allow_tables_to_appear_in_same_query!(rzd_tasks, tokens, users,);
+diesel::allow_tables_to_appear_in_same_query!(rzd_tasks, tokens, users, verify_tokens,);

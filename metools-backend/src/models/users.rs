@@ -1,5 +1,5 @@
 use derive_more::Display;
-use diesel::prelude::*;
+use diesel::{prelude::*, result::Error};
 use serde::Serialize;
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -8,7 +8,7 @@ use crate::schema::users::dsl::users;
 
 #[derive(Debug, Display)]
 pub enum UsersDBError {
-    UnknownError,
+    UnknownError(Error),
 }
 
 #[derive(Queryable, Selectable, Serialize, ToSchema)]
@@ -59,10 +59,7 @@ pub fn insert_new_user(
 
     match r {
         Ok(user) => Ok(user),
-        Err(err) => {
-            log::error!("Error on inserting user {err}");
-            Err(UsersDBError::UnknownError)
-        }
+        Err(err) => Err(UsersDBError::UnknownError(err)),
     }
 }
 
@@ -79,10 +76,7 @@ pub fn get_user_by_username(
 
     match r {
         Ok(user) => Ok(user),
-        Err(err) => {
-            log::error!("Error on get user by username {err}");
-            Err(UsersDBError::UnknownError)
-        }
+        Err(err) => Err(UsersDBError::UnknownError(err)),
     }
 }
 
@@ -96,10 +90,7 @@ pub fn get_user_by_id(conn: &mut PgConnection, user_id: Uuid) -> Result<UserRetu
 
     match r {
         Ok(user) => Ok(user),
-        Err(err) => {
-            log::error!("Error on get user by id {err}");
-            Err(UsersDBError::UnknownError)
-        }
+        Err(err) => Err(UsersDBError::UnknownError(err)),
     }
 }
 
@@ -113,9 +104,20 @@ pub fn is_user_verified(conn: &mut PgConnection, user_id: Uuid) -> Result<bool, 
 
     match r {
         Ok(is_user_verified) => Ok(is_user_verified),
-        Err(err) => {
-            log::error!("Error on check if user is_verified by id {err}");
-            Err(UsersDBError::UnknownError)
-        }
+        Err(err) => Err(UsersDBError::UnknownError(err)),
+    }
+}
+
+pub fn set_user_verified(conn: &mut PgConnection, user_id: Uuid) -> Result<(), UsersDBError> {
+    use crate::schema::users::dsl::*;
+
+    let r: QueryResult<usize> = diesel::update(users)
+        .filter(id.eq(user_id))
+        .set(is_verified.eq(true))
+        .execute(conn);
+
+    match r {
+        Ok(_) => Ok(()),
+        Err(err) => Err(UsersDBError::UnknownError(err)),
     }
 }

@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use actix_web::body::BoxBody;
 use actix_web::http::header::ContentType;
 use actix_web::http::StatusCode;
-use actix_web::{delete, get, post, web, HttpMessage, HttpRequest, HttpResponse, ResponseError};
+use actix_web::{delete, get, post, web, HttpResponse, ResponseError};
 use derive_more::Display;
 use serde::Deserialize;
 use serde_json::json;
@@ -32,7 +32,7 @@ impl ResponseError for TasksError {
             Self::TasksServiceError(error) => match error {
                 TasksServiceError::TasksDBError(error) => match error {
                     TasksDBError::NoDeletedTask => StatusCode::NOT_FOUND,
-                    TasksDBError::UnknownError => StatusCode::INTERNAL_SERVER_ERROR,
+                    TasksDBError::UnknownError(_) => StatusCode::INTERNAL_SERVER_ERROR,
                 },
                 TasksServiceError::UnknownError => StatusCode::INTERNAL_SERVER_ERROR,
             },
@@ -50,7 +50,7 @@ impl ResponseError for TasksError {
                         .body(
                             json!({"error": "Task not found", "status": "not_found"}).to_string(),
                         ),
-                    TasksDBError::UnknownError => HttpResponse::build(self.status_code())
+                    TasksDBError::UnknownError(_) => HttpResponse::build(self.status_code())
                         .insert_header(ContentType::json())
                         .body(
                             json!({"error": "Unknown error", "status": "unknown_error"})

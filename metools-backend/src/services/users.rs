@@ -5,14 +5,16 @@ use rand_core::OsRng;
 use uuid::Uuid;
 
 use crate::models::users::{
-    get_user_by_id, get_user_by_username, insert_new_user, is_user_verified,
+    get_user_by_id, get_user_by_username, insert_new_user, is_user_verified, set_user_verified,
     GetUserByUsernameReturn, UserReturn, UsersDBError,
 };
+use crate::models::verify_tokens::{get_verify_token_by_value, VerifyTokensDBError};
 use crate::models::DBPool;
 
 #[derive(Debug, Display)]
 pub enum UsersServiceError {
     UsersDBError(UsersDBError),
+    VerifyTokensDBError(VerifyTokensDBError),
     InvalidUserPassword,
     UnknownError,
 }
@@ -83,6 +85,20 @@ impl UsersService {
         match r {
             Ok(user) => Ok(user),
             Err(err) => Err(UsersServiceError::UsersDBError(err)),
+        }
+    }
+    pub fn verify_user(&self, token: Uuid) -> Result<(), UsersServiceError> {
+        let verify_token = get_verify_token_by_value(&mut self.pool.get().unwrap(), token);
+
+        match verify_token {
+            Ok(verify_token) => {
+                let r = set_user_verified(&mut self.pool.get().unwrap(), verify_token.user_id);
+                match r {
+                    Ok(()) => Ok(()),
+                    Err(err) => Err(UsersServiceError::UsersDBError(err)),
+                }
+            }
+            Err(err) => Err(UsersServiceError::VerifyTokensDBError(err)),
         }
     }
 
