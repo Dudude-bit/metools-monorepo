@@ -168,7 +168,7 @@ pub async fn verify_user(
     query_data: web::Query<VerifyData>,
     state: web::Data<AppState>,
 ) -> Result<web::Redirect, UsersError> {
-    let verify_key = query_data.verify_key.clone();
+    let verify_key = query_data.verify_key;
     let r = web::block(move || state.users_service.verify_user(verify_key))
         .await
         .unwrap();
