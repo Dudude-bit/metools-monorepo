@@ -11,7 +11,7 @@ pub struct AppState {
     pub users_service: UsersService,
     pub tasks_service: TasksService,
     pub jwt_secret: String,
-    pub jwt_maxage: i32,
+    pub jwt_maxage: usize,
 }
 
 #[derive(Serialize, ToSchema)]

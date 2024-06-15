@@ -1,14 +1,19 @@
 use argon2::password_hash::SaltString;
 use argon2::{Argon2, PasswordHash, PasswordHasher as _, PasswordVerifier as _};
+use chrono::Days;
 use derive_more::Display;
+use diesel::Connection;
 use rand_core::OsRng;
 use uuid::Uuid;
 
+use super::mailer::MailerService;
 use crate::models::users::{
     get_user_by_id, get_user_by_username, insert_new_user, is_user_verified, set_user_verified,
     GetUserByUsernameReturn, UserReturn, UsersDBError,
 };
-use crate::models::verify_tokens::{get_verify_token_by_value, VerifyTokensDBError};
+use crate::models::verify_tokens::{
+    create_verify_token, get_verify_token_by_value, VerifyTokensDBError,
+};
 use crate::models::DBPool;
 
 #[derive(Debug, Display)]
@@ -19,14 +24,21 @@ pub enum UsersServiceError {
     UnknownError,
 }
 
+impl From<diesel::result::Error> for UsersServiceError {
+    fn from(e: diesel::result::Error) -> Self {
+        UsersServiceError::UsersDBError(UsersDBError::UnknownError(e))
+    }
+}
+
 #[derive(Clone)]
 pub struct UsersService {
     pool: DBPool,
+    mailer: MailerService,
 }
 
 impl UsersService {
-    pub fn init(pool: DBPool) -> Self {
-        Self { pool }
+    pub fn init(pool: DBPool, mailer: MailerService) -> Self {
+        Self { pool, mailer }
     }
 
     pub fn register_user(
@@ -38,18 +50,44 @@ impl UsersService {
         let salt = SaltString::generate(&mut OsRng);
         let hashed_password = Argon2::default().hash_password(password.as_bytes(), &salt);
         match hashed_password {
-            Ok(hashed_password) => {
-                let r = insert_new_user(
-                    &mut self.pool.get().unwrap(),
+            Ok(hashed_password) => self.pool.get().unwrap().transaction(|connection| {
+                let r_user = insert_new_user(
+                    connection,
                     username,
-                    email,
+                    email.clone(),
                     hashed_password.to_string(),
                 );
-                match r {
-                    Ok(user) => Ok(user),
-                    Err(err) => Err(UsersServiceError::UsersDBError(err)),
+                if r_user.is_err() {
+                    return Err(UsersServiceError::UsersDBError(r_user.err().unwrap()));
                 }
-            }
+                let r_user = r_user.unwrap();
+
+                let r_verify_token = create_verify_token(
+                    connection,
+                    Uuid::new_v4(),
+                    chrono::offset::Utc::now()
+                        .checked_add_days(Days::new(1)) // verify token valid for 1 day
+                        .unwrap(),
+                    r_user.id,
+                );
+
+                if r_verify_token.is_err() {
+                    return Err(UsersServiceError::VerifyTokensDBError(
+                        r_verify_token.err().unwrap(),
+                    ));
+                }
+
+                let r_verify_token = r_verify_token.unwrap();
+
+                let r_email = self.mailer.send_verification_mail(email, r_verify_token.id);
+                match r_email {
+                    Ok(_) => Ok(r_user),
+                    Err(err) => {
+                        log::error!("Error on sending email: {err}");
+                        Err(UsersServiceError::UnknownError)
+                    }
+                }
+            }),
             Err(err) => {
                 log::error!("Error on hashing password while registering user: {err}");
                 Err(UsersServiceError::UnknownError)

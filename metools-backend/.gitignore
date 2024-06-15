@@ -12,3 +12,5 @@ target/
 *.pdb
 
 .idea/
+
+.env

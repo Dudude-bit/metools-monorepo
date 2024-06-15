@@ -8,6 +8,7 @@ mod utils;
 use std::env;
 use std::fs::File;
 use std::io::Write;
+use std::path::Path;
 
 use actix_cors::Cors;
 use actix_web::body::MessageBody;
@@ -20,6 +21,9 @@ use controllers::rzd::tasks::{
 use diesel::r2d2::ConnectionManager;
 use diesel::{r2d2, PgConnection};
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
+use lettre::transport::smtp::authentication::Credentials;
+use lettre::{SmtpTransport};
+use services::mailer::MailerService;
 use services::tasks::TasksService;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
@@ -88,8 +92,20 @@ async fn main() -> std::io::Result<()> {
     }
     env::set_var("RUST_LOG", "debug");
 
+    if Path::new(".env").exists() {
+        dotenv::dotenv().ok();
+    }
+
     env_logger::init();
     let config = Config::init();
+    let creds = Credentials::new(config.smtp_username, config.smtp_password);
+
+    // Open a remote connection to gmail
+    let smtp_transport = SmtpTransport::relay(config.smtp_hostname.as_str())
+        .unwrap()
+        .credentials(creds)
+        .build();
+
     let manager = ConnectionManager::<PgConnection>::new(config.db_url.clone());
     let pool: DBPool = r2d2::Pool::builder()
         .build(manager)
@@ -127,7 +143,14 @@ async fn main() -> std::io::Result<()> {
             .wrap(prometheus)
             .wrap(cors)
             .app_data(web::Data::new(AppState {
-                users_service: UsersService::init(pool.clone()),
+                users_service: UsersService::init(
+                    pool.clone(),
+                    MailerService::init(
+                        smtp_transport.clone(),
+                        config.smtp_from.clone(),
+                        config.service_url.clone(),
+                    ),
+                ),
                 tasks_service: TasksService::init(pool.clone()),
                 jwt_secret: config.jwt_secret.clone(),
                 jwt_maxage: config.jwt_maxage,

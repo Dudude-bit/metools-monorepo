@@ -15,9 +15,9 @@ pub enum UsersDBError {
 #[diesel(table_name = crate::schema::users)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct UserReturn {
-    id: Uuid,
-    username: String,
-    email: String,
+    pub id: Uuid,
+    pub username: String,
+    pub email: String,
 }
 
 #[derive(Queryable, Selectable, Serialize)]
@@ -33,10 +33,10 @@ pub struct GetUserByUsernameReturn {
 #[diesel(table_name = crate::schema::users)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct NewUser {
-    id: Uuid,
-    username: String,
-    email: String,
-    password: String,
+    pub id: Uuid,
+    pub username: String,
+    pub email: String,
+    pub password: String,
 }
 
 pub fn insert_new_user(

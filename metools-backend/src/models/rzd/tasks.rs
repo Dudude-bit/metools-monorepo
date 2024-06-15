@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use chrono;
+use chrono::{DateTime, Utc};
 use derive_more::Display;
 use diesel::{prelude::*, result::Error};
 use serde::{Deserialize, Serialize};
@@ -30,7 +30,7 @@ struct NewTask {
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Task {
     pub id: Uuid,
-    pub created_at: chrono::NaiveDateTime,
+    pub created_at: DateTime<Utc>,
     pub type_: String,
     pub data: Value,
     pub user_id: Uuid,

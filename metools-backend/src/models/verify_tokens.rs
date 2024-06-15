@@ -1,3 +1,4 @@
+use chrono::{DateTime, Utc};
 use derive_more::Display;
 use diesel::{prelude::*, result::Error};
 use uuid::Uuid;
@@ -7,15 +8,47 @@ pub enum VerifyTokensDBError {
     UnknownError(Error),
 }
 
+#[derive(Insertable)]
+#[diesel(table_name = crate::schema::verify_tokens)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct NewVerifyToken {
+    pub valid_until: DateTime<Utc>,
+    pub token: Uuid,
+    pub user_id: Uuid,
+}
+
 #[derive(Queryable, Selectable)]
 #[diesel(table_name = crate::schema::verify_tokens)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct VerifyTokenReturn {
     pub id: Uuid,
-    pub created_at: chrono::NaiveDateTime,
-    pub valid_until: chrono::NaiveDateTime,
+    pub created_at: DateTime<Utc>,
+    pub valid_until: DateTime<Utc>,
     pub token: Uuid,
     pub user_id: Uuid,
+}
+
+pub fn create_verify_token(
+    conn: &mut PgConnection,
+    token_value: Uuid,
+    valid_until_value: DateTime<Utc>,
+    user_id_value: Uuid,
+) -> Result<VerifyTokenReturn, VerifyTokensDBError> {
+    use crate::schema::verify_tokens::dsl::*;
+    let verify_token = NewVerifyToken {
+        token: token_value,
+        valid_until: valid_until_value,
+        user_id: user_id_value,
+    };
+    let r: QueryResult<VerifyTokenReturn> = diesel::insert_into(verify_tokens)
+        .values(verify_token)
+        .returning(VerifyTokenReturn::as_returning())
+        .get_result(conn);
+
+    match r {
+        Ok(verify_token) => Ok(verify_token),
+        Err(err) => Err(VerifyTokensDBError::UnknownError(err)),
+    }
 }
 
 pub fn get_verify_token_by_value(
