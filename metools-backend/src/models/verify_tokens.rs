@@ -12,6 +12,7 @@ pub enum VerifyTokensDBError {
 #[diesel(table_name = crate::schema::verify_tokens)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct NewVerifyToken {
+    pub id: Uuid,
     pub valid_until: DateTime<Utc>,
     pub token: Uuid,
     pub user_id: Uuid,
@@ -36,6 +37,7 @@ pub fn create_verify_token(
 ) -> Result<VerifyTokenReturn, VerifyTokensDBError> {
     use crate::schema::verify_tokens::dsl::*;
     let verify_token = NewVerifyToken {
+        id: Uuid::new_v4(),
         token: token_value,
         valid_until: valid_until_value,
         user_id: user_id_value,
