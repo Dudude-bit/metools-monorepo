@@ -22,7 +22,7 @@ use diesel::r2d2::ConnectionManager;
 use diesel::{r2d2, PgConnection};
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use lettre::transport::smtp::authentication::Credentials;
-use lettre::{SmtpTransport};
+use lettre::SmtpTransport;
 use services::mailer::MailerService;
 use services::tasks::TasksService;
 use utoipa::OpenApi;
@@ -30,7 +30,7 @@ use utoipa_swagger_ui::SwaggerUi;
 
 use crate::config::Config;
 use crate::controllers::schema::AppState;
-use crate::controllers::users::users::{login, me, signup};
+use crate::controllers::users::users::{login, me, signup, verify_user};
 use crate::models::DBPool;
 use crate::services::users::UsersService;
 
@@ -130,6 +130,7 @@ async fn main() -> std::io::Result<()> {
             .service(me)
             .service(login)
             .service(signup)
+            .service(verify_user)
             .service(list_tasks)
             .service(create_task)
             .service(delete_task_by_id_for_user)
