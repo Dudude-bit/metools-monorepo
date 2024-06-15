@@ -33,6 +33,12 @@ pub struct LoginData {
     password: String,
 }
 
+#[derive(Deserialize)]
+pub struct VerifyData {
+    pub verify_key: Uuid,
+    pub redirect: String,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TokenClaims {
     pub sub: String,
@@ -159,16 +165,16 @@ pub async fn signup(
 
 #[get("/api/v1/users/verify")]
 pub async fn verify_user(
-    verify_key: web::Query<Uuid>,
-    redirect: web::Query<String>,
+    query_data: web::Query<VerifyData>,
     state: web::Data<AppState>,
 ) -> Result<web::Redirect, UsersError> {
-    let r = web::block(move || state.users_service.verify_user(verify_key.0))
+    let verify_key = query_data.verify_key.clone();
+    let r = web::block(move || state.users_service.verify_user(verify_key))
         .await
         .unwrap();
 
     match r {
-        Ok(()) => Ok(web::Redirect::to(redirect.0).permanent()),
+        Ok(()) => Ok(web::Redirect::to(query_data.redirect.clone()).permanent()),
         Err(err) => Err(UsersError::UsersServiceError(err)),
     }
 }
