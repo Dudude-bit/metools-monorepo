@@ -63,7 +63,7 @@ pub fn get_verify_token_by_value(
         .filter(
             token
                 .eq(token_value)
-                .and(valid_until.lt(chrono::offset::Utc::now())),
+                .and(valid_until.gt(chrono::offset::Utc::now())),
         )
         .select(VerifyTokenReturn::as_select())
         .first(conn);
