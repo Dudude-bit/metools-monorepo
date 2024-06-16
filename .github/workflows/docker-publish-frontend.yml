@@ -3,7 +3,7 @@ name: Docker-frontend
 on:
   push:
     branches: ["main"]
-    paths: ["metools-fronted/**"]
+    paths: ["metools-frontend/**"]
 
 env:
   # Use docker.io for Docker Hub if empty
