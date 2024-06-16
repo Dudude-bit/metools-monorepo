@@ -5,10 +5,12 @@ mod schema;
 mod services;
 mod utils;
 
-use std::env;
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
+use std::thread::sleep;
+use std::time::Duration;
+use std::{env, thread};
 
 use actix_cors::Cors;
 use actix_web::body::MessageBody;
@@ -19,10 +21,11 @@ use controllers::rzd::tasks::{
     create_task, delete_all_tasks_for_user, delete_task_by_id_for_user, list_tasks,
 };
 use diesel::r2d2::ConnectionManager;
-use diesel::{r2d2, PgConnection};
+use diesel::{r2d2, ExpressionMethods, PgConnection, QueryDsl};
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use lettre::transport::smtp::authentication::Credentials;
 use lettre::SmtpTransport;
+use models::verify_tokens::delete_expired_verify_tokens;
 use services::mailer::MailerService;
 use services::tasks::TasksService;
 use utoipa::OpenApi;
@@ -115,6 +118,15 @@ async fn main() -> std::io::Result<()> {
         run_migrations(&mut pool.get().unwrap());
         log::info!("Ran migrations");
     }
+    let cloned_pool = pool.clone();
+    thread::spawn(move || loop {
+        let r = delete_expired_verify_tokens(&mut cloned_pool.get().unwrap());
+        match r {
+            Ok(c) => log::info!("Deleted {c} verify tokens"),
+            Err(err) => log::error!("Error on loop delete_expired_verify_tokens: {err}"),
+        }
+        sleep(Duration::from_secs(60));
+    });
     HttpServer::new(move || {
         let cors = Cors::default()
             .allow_any_origin()

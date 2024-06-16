@@ -6,7 +6,6 @@ use diesel::Connection;
 use rand_core::OsRng;
 use uuid::Uuid;
 
-use super::mailer::MailerService;
 use crate::models::users::{
     get_user_by_id, get_user_by_username, insert_new_user, is_user_verified, set_user_verified,
     GetUserByUsernameReturn, UserReturn, UsersDBError,
@@ -15,6 +14,7 @@ use crate::models::verify_tokens::{
     create_verify_token, delete_verify_token_by_id, get_verify_token_by_value, VerifyTokensDBError,
 };
 use crate::models::DBPool;
+use crate::services::mailer::MailerService;
 
 #[derive(Debug, Display)]
 pub enum UsersServiceError {

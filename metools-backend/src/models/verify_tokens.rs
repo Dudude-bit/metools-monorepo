@@ -93,3 +93,13 @@ pub fn delete_verify_token_by_id(
         Err(err) => Err(VerifyTokensDBError::UnknownError(err)),
     }
 }
+
+pub fn delete_expired_verify_tokens(conn: &mut PgConnection) -> Result<usize, VerifyTokensDBError> {
+    use crate::schema::verify_tokens::dsl::*;
+    let r: QueryResult<usize> =
+        diesel::delete(verify_tokens.filter(valid_until.le(chrono::Utc::now()))).execute(conn);
+    match r {
+        Ok(c) => Ok(c),
+        Err(err) => Err(VerifyTokensDBError::UnknownError(err)),
+    }
+}
