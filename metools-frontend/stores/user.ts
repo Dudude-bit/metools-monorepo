@@ -11,7 +11,7 @@ export const useUserStore = defineStore('user', {
                 username: "",
                 email: ""
             })
-
+            localStorage.removeItem('token');
         },
 
         async login(username: string, password: string) {
