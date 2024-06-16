@@ -3,14 +3,13 @@ import {login as apiLogin, me as apiMe} from "~/src/api";
 
 export const useUserStore = defineStore('user', {
     state: () => {
-        return { username: undefined,  email: undefined, token: undefined }
+        return { username: "",  email: "" }
     },
     actions: {
         logout() {
             this.$patch({
-                username: undefined,
-                email: undefined,
-                token: undefined
+                username: "",
+                email: ""
             })
 
         },
@@ -22,6 +21,7 @@ export const useUserStore = defineStore('user', {
                     password: password
                 }
             })
+            localStorage.setItem('token', dataLogin.data);
             const dataMe = await apiMe(
                 {
                     xApiAuthToken: dataLogin.data,
@@ -29,8 +29,7 @@ export const useUserStore = defineStore('user', {
             )
             this.$patch({
                 username: dataMe.data.username,
-                email: dataMe.data.email,
-                token: dataLogin.data,
+                email: dataMe.data.email
             })
         }
     },
