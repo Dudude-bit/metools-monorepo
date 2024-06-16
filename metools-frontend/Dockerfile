@@ -1,4 +1,5 @@
 ARG NODE_IMAGE=oven/bun:1-alpine
+ARG BASE_API_URL
 
 FROM $NODE_IMAGE AS base
 WORKDIR /usr/src/app
@@ -23,4 +24,5 @@ COPY --chown=bun:bun --from=prerelease /usr/src/app/.output .
 USER bun
 ENV HOST 0.0.0.0
 EXPOSE 3000
+ENV BASE_API_URL BASE_API_URL
 ENTRYPOINT [ "bun", "run", "server/index.mjs" ]

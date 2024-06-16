@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import {OpenAPI} from "~/src/api";
-
-OpenAPI.BASE = "https://metools.dudude-bit.ru"
+const config = useRuntimeConfig()
+OpenAPI.BASE = config.public.baseApiURL as string
 const { isMobile } = useDevice();
 
 const links = [
