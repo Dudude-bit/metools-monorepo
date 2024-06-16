@@ -21,7 +21,7 @@ use controllers::rzd::tasks::{
     create_task, delete_all_tasks_for_user, delete_task_by_id_for_user, list_tasks,
 };
 use diesel::r2d2::ConnectionManager;
-use diesel::{r2d2, ExpressionMethods, PgConnection, QueryDsl};
+use diesel::{r2d2, PgConnection};
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use lettre::transport::smtp::authentication::Credentials;
 use lettre::SmtpTransport;
