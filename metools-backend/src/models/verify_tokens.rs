@@ -5,6 +5,7 @@ use uuid::Uuid;
 
 #[derive(Debug, Display)]
 pub enum VerifyTokensDBError {
+    VerifyTokenNotFound,
     UnknownError(Error),
 }
 
@@ -70,6 +71,25 @@ pub fn get_verify_token_by_value(
 
     match r {
         Ok(verify_token) => Ok(verify_token),
+        Err(err) => Err(VerifyTokensDBError::UnknownError(err)),
+    }
+}
+
+pub fn delete_verify_token_by_id(
+    conn: &mut PgConnection,
+    verify_token_id: Uuid,
+) -> Result<(), VerifyTokensDBError> {
+    use crate::schema::verify_tokens::dsl::*;
+
+    let r: QueryResult<usize> =
+        diesel::delete(verify_tokens.filter(id.eq(verify_token_id))).execute(conn);
+    match r {
+        Ok(usize) => {
+            if usize == 0 {
+                return Err(VerifyTokensDBError::VerifyTokenNotFound);
+            }
+            Ok(())
+        }
         Err(err) => Err(VerifyTokensDBError::UnknownError(err)),
     }
 }

@@ -12,12 +12,13 @@ use crate::models::users::{
     GetUserByUsernameReturn, UserReturn, UsersDBError,
 };
 use crate::models::verify_tokens::{
-    create_verify_token, get_verify_token_by_value, VerifyTokensDBError,
+    create_verify_token, delete_verify_token_by_id, get_verify_token_by_value, VerifyTokensDBError,
 };
 use crate::models::DBPool;
 
 #[derive(Debug, Display)]
 pub enum UsersServiceError {
+    GenericDBError(diesel::result::Error),
     UsersDBError(UsersDBError),
     VerifyTokensDBError(VerifyTokensDBError),
     InvalidUserPassword,
@@ -26,7 +27,7 @@ pub enum UsersServiceError {
 
 impl From<diesel::result::Error> for UsersServiceError {
     fn from(e: diesel::result::Error) -> Self {
-        UsersServiceError::UsersDBError(UsersDBError::UnknownError(e))
+        UsersServiceError::GenericDBError(e)
     }
 }
 
@@ -128,18 +129,29 @@ impl UsersService {
         }
     }
     pub fn verify_user(&self, token: Uuid) -> Result<(), UsersServiceError> {
-        let verify_token = get_verify_token_by_value(&mut self.pool.get().unwrap(), token);
-
-        match verify_token {
-            Ok(verify_token) => {
-                let r = set_user_verified(&mut self.pool.get().unwrap(), verify_token.user_id);
-                match r {
-                    Ok(()) => Ok(()),
-                    Err(err) => Err(UsersServiceError::UsersDBError(err)),
-                }
+        self.pool.get().unwrap().transaction(|connection| {
+            let verify_token = get_verify_token_by_value(connection, token);
+            if verify_token.is_err() {
+                return Err(UsersServiceError::VerifyTokensDBError(
+                    verify_token.err().unwrap(),
+                ));
             }
-            Err(err) => Err(UsersServiceError::VerifyTokensDBError(err)),
-        }
+            let verify_token = verify_token.unwrap();
+
+            let r_set_user_verified = set_user_verified(connection, verify_token.user_id);
+            if r_set_user_verified.is_err() {
+                return Err(UsersServiceError::UsersDBError(
+                    r_set_user_verified.err().unwrap(),
+                ));
+            }
+
+            let r = delete_verify_token_by_id(connection, verify_token.id);
+
+            match r {
+                Ok(()) => Ok(()),
+                Err(err) => Err(UsersServiceError::VerifyTokensDBError(err)),
+            }
+        })
     }
 
     pub fn get_user_is_verified(&self, user_id: Uuid) -> Result<bool, UsersServiceError> {

@@ -58,6 +58,7 @@ impl ResponseError for UsersError {
         match self {
             Self::InvalidInputData(_) => StatusCode::BAD_REQUEST,
             Self::UsersServiceError(service_err) => match service_err {
+                UsersServiceError::GenericDBError(_) => StatusCode::INTERNAL_SERVER_ERROR,
                 UsersServiceError::UsersDBError(_) => StatusCode::INTERNAL_SERVER_ERROR,
                 UsersServiceError::InvalidUserPassword => StatusCode::UNAUTHORIZED,
                 UsersServiceError::VerifyTokensDBError(_) => StatusCode::INTERNAL_SERVER_ERROR,
@@ -72,6 +73,9 @@ impl ResponseError for UsersError {
                 .insert_header(ContentType::json())
                 .body(json!({"error": "Invalid input data", "status": "invalid_data"}).to_string()),
             Self::UsersServiceError(service_err) => match service_err {
+                UsersServiceError::GenericDBError(_) => HttpResponse::build(self.status_code())
+                    .insert_header(ContentType::json())
+                    .body(json!({"error": "Unknown error", "status": "unknown_error"}).to_string()),
                 UsersServiceError::UsersDBError(_) => HttpResponse::build(self.status_code())
                     .insert_header(ContentType::json())
                     .body(json!({"error": "Unknown error", "status": "unknown_error"}).to_string()),

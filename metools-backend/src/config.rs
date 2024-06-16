@@ -18,7 +18,8 @@ pub struct Config {
 impl Config {
     pub fn init() -> Self {
         let http_address = env::var("HTTP_ADDRESS").unwrap_or(String::from("0.0.0.0:8000"));
-        let service_url = env::var("SERVICE_URL").unwrap_or(http_address.clone());
+        let service_url =
+            env::var("SERVICE_URL").unwrap_or(format!("http://{}", http_address.clone()));
         let db_url = env::var("DATABASE_URL").unwrap_or(String::from(
             "postgresql://postgres:postgres@localhost:5432/metools",
         ));
