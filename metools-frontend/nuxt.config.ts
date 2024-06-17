@@ -4,8 +4,8 @@ export default defineNuxtConfig({
   modules: ["@nuxt/ui", "@pinia/nuxt", "@nuxtjs/device"],
   runtimeConfig: {
     public: {
-      baseApiURL: process.env.BASE_URL || 'http://localhost:8000/',
+      baseApiURL: process.env.BASE_URL || "http://localhost:8000",
     },
   },
-})
+});
 // TODO change base url depending on if dev

@@ -7,3 +7,7 @@ gen-swagger:
 .PHONY: dev
 dev:
 	bun run dev
+
+.PHONY: fmt
+fmt:
+	bun run fmt
