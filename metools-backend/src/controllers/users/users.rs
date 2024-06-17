@@ -1,7 +1,9 @@
-use actix_web::body::BoxBody;
-use actix_web::http::header::ContentType;
-use actix_web::http::StatusCode;
-use actix_web::{get, post, web, HttpResponse, ResponseError};
+use actix_web::{
+    body::BoxBody,
+    get,
+    http::{header::ContentType, StatusCode},
+    post, web, HttpResponse, ResponseError,
+};
 use chrono::{Duration, Utc};
 use derive_more::Display;
 use jsonwebtoken::{encode, EncodingKey, Header};
@@ -11,9 +13,13 @@ use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::{Validate, ValidationErrors};
 
-use crate::controllers::middlewares::UserMiddleware;
-use crate::controllers::schema::{AppState, ResponseLogin, ResponseMe, ResponseSignUp};
-use crate::services::users::UsersServiceError;
+use crate::{
+    controllers::{
+        middlewares::UserMiddleware,
+        schema::{AppState, ResponseLogin, ResponseMe, ResponseSignUp},
+    },
+    services::users::UsersServiceError,
+};
 
 #[derive(Deserialize, Validate, ToSchema)]
 pub struct SignUpData {
@@ -167,6 +173,13 @@ pub async fn signup(
     }
 }
 
+#[utoipa::path(
+responses(
+(status = OK, description = "OK", body = ResponseLogin),
+(status = NOT_FOUND, description = "Verify token not found or expired", body = ErrorResponse)
+),
+tag = "users")
+]
 #[get("/api/v1/users/verify")]
 pub async fn verify_user(
     query_data: web::Query<VerifyData>,

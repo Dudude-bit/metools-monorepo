@@ -3,11 +3,13 @@ use std::collections::HashMap;
 use derive_more::Display;
 use uuid::Uuid;
 
-use crate::models::rzd::tasks::{
-    delete_all_tasks_for_user, delete_task_by_id_for_user, insert_new_task, list_all_users_tasks,
-    Task, TasksDBError,
+use crate::models::{
+    rzd::tasks::{
+        delete_all_tasks_for_user, delete_task_by_id_for_user, insert_new_task,
+        list_all_users_tasks, Task, TasksDBError,
+    },
+    DBPool,
 };
-use crate::models::DBPool;
 
 #[derive(Debug, Display)]
 pub enum TasksServiceError {

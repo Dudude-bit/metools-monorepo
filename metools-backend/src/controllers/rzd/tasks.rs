@@ -1,9 +1,11 @@
 use std::collections::HashMap;
 
-use actix_web::body::BoxBody;
-use actix_web::http::header::ContentType;
-use actix_web::http::StatusCode;
-use actix_web::{delete, get, post, web, HttpResponse, ResponseError};
+use actix_web::{
+    body::BoxBody,
+    delete, get,
+    http::{header::ContentType, StatusCode},
+    post, web, HttpResponse, ResponseError,
+};
 use derive_more::Display;
 use serde::Deserialize;
 use serde_json::json;
@@ -11,13 +13,14 @@ use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::{Validate, ValidateArgs, ValidationError, ValidationErrors};
 
-use crate::controllers::middlewares::UserMiddleware;
-use crate::controllers::schema::AppState;
-use crate::controllers::schema::{
-    ResponseCreateTask, ResponseDeleteTaskByIdForUser, ResponseListTasks,
+use crate::{
+    controllers::{
+        middlewares::UserMiddleware,
+        schema::{AppState, ResponseCreateTask, ResponseDeleteTaskByIdForUser, ResponseListTasks},
+    },
+    models::rzd::tasks::TasksDBError,
+    services::tasks::TasksServiceError,
 };
-use crate::models::rzd::tasks::TasksDBError;
-use crate::services::tasks::TasksServiceError;
 
 #[derive(Debug, Display)]
 enum TasksError {

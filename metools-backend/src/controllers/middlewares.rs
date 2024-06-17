@@ -1,14 +1,15 @@
 use std::future::{ready, Ready};
 
-use actix_web::error::{ErrorForbidden, ErrorInternalServerError, ErrorUnauthorized};
-use actix_web::{dev::Payload, Error as ActixWebError};
-use actix_web::{web, FromRequest, HttpRequest};
+use actix_web::{
+    dev::Payload,
+    error::{ErrorForbidden, ErrorInternalServerError, ErrorUnauthorized},
+    web, Error as ActixWebError, FromRequest, HttpRequest,
+};
 use jsonwebtoken::{decode, DecodingKey, Validation};
 use serde_json::json;
 use uuid::Uuid;
 
-use crate::controllers::schema::AppState;
-use crate::controllers::users::users::TokenClaims;
+use crate::controllers::{schema::AppState, users::users::TokenClaims};
 
 pub struct UserMiddleware {
     pub user_id: Uuid,

@@ -5,37 +5,35 @@ mod schema;
 mod services;
 mod utils;
 
-use std::fs::File;
-use std::io::Write;
-use std::path::Path;
-use std::thread::sleep;
-use std::time::Duration;
-use std::{env, thread};
+use std::{env, fs::File, io::Write, path::Path, thread, thread::sleep, time::Duration};
 
 use actix_cors::Cors;
-use actix_web::body::MessageBody;
-use actix_web::middleware::{Compress, Logger};
-use actix_web::{web, App, HttpResponse, HttpServer};
+use actix_web::{
+    body::MessageBody,
+    middleware::{Compress, Logger},
+    web, App, HttpResponse, HttpServer,
+};
 use actix_web_prometheus::PrometheusMetricsBuilder;
 use controllers::rzd::tasks::{
     create_task, delete_all_tasks_for_user, delete_task_by_id_for_user, list_tasks,
 };
-use diesel::r2d2::ConnectionManager;
-use diesel::{r2d2, PgConnection};
+use diesel::{r2d2, r2d2::ConnectionManager, PgConnection};
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
-use lettre::transport::smtp::authentication::Credentials;
-use lettre::SmtpTransport;
+use lettre::{transport::smtp::authentication::Credentials, SmtpTransport};
 use models::verify_tokens::delete_expired_verify_tokens;
-use services::mailer::MailerService;
-use services::tasks::TasksService;
+use services::{mailer::MailerService, tasks::TasksService};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
-use crate::config::Config;
-use crate::controllers::schema::AppState;
-use crate::controllers::users::users::{login, me, signup, verify_user};
-use crate::models::DBPool;
-use crate::services::users::UsersService;
+use crate::{
+    config::Config,
+    controllers::{
+        schema::AppState,
+        users::users::{login, me, signup, verify_user},
+    },
+    models::DBPool,
+    services::users::UsersService,
+};
 
 #[derive(OpenApi)]
 #[openapi(

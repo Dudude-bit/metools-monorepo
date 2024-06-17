@@ -1,20 +1,26 @@
-use argon2::password_hash::SaltString;
-use argon2::{Argon2, PasswordHash, PasswordHasher as _, PasswordVerifier as _};
+use argon2::{
+    password_hash::SaltString, Argon2, PasswordHash, PasswordHasher as _, PasswordVerifier as _,
+};
 use chrono::Days;
 use derive_more::Display;
 use diesel::Connection;
 use rand_core::OsRng;
 use uuid::Uuid;
 
-use crate::models::users::{
-    get_user_by_id, get_user_by_username, insert_new_user, is_user_verified, set_user_verified,
-    GetUserByUsernameReturn, UserReturn, UsersDBError,
+use crate::{
+    models::{
+        users::{
+            get_user_by_id, get_user_by_username, insert_new_user, is_user_verified,
+            set_user_verified, GetUserByUsernameReturn, UserReturn, UsersDBError,
+        },
+        verify_tokens::{
+            create_verify_token, delete_verify_token_by_id, get_verify_token_by_value,
+            VerifyTokensDBError,
+        },
+        DBPool,
+    },
+    services::mailer::MailerService,
 };
-use crate::models::verify_tokens::{
-    create_verify_token, delete_verify_token_by_id, get_verify_token_by_value, VerifyTokensDBError,
-};
-use crate::models::DBPool;
-use crate::services::mailer::MailerService;
 
 #[derive(Debug, Display)]
 pub enum UsersServiceError {

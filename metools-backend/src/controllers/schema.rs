@@ -1,10 +1,10 @@
 use serde::Serialize;
 use utoipa::ToSchema;
 
-use crate::models::rzd::tasks::Task;
-use crate::models::users::UserReturn;
-use crate::services::tasks::TasksService;
-use crate::services::users::UsersService;
+use crate::{
+    models::{rzd::tasks::Task, users::UserReturn},
+    services::{tasks::TasksService, users::UsersService},
+};
 
 #[derive(Clone)]
 pub struct AppState {
