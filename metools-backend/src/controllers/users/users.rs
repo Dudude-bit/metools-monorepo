@@ -186,6 +186,7 @@ pub async fn signup(
 }
 
 #[utoipa::path(
+params(("verify_key" = Uuid, Query, description = "Verify token"),("redirect" = String, Query, description = "Redirect link")),
 responses(
 (status = OK, description = "OK", body = ResponseLogin),
 (status = NOT_FOUND, description = "Verify token not found or expired", body = ErrorResponse)

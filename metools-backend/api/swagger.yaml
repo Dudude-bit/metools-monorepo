@@ -245,6 +245,20 @@ paths:
       tags:
       - users
       operationId: verify_user
+      parameters:
+      - name: verify_key
+        in: query
+        description: Verify token
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: redirect
+        in: query
+        description: Redirect link
+        required: true
+        schema:
+          type: string
       responses:
         '200':
           description: OK
