@@ -71,7 +71,10 @@ pub fn get_verify_token_by_value(
 
     match r {
         Ok(verify_token) => Ok(verify_token),
-        Err(err) => Err(VerifyTokensDBError::UnknownError(err)),
+        Err(err) => match err {
+            Error::NotFound => Err(VerifyTokensDBError::VerifyTokenNotFound),
+            _ => Err(VerifyTokensDBError::UnknownError(err)),
+        },
     }
 }
 

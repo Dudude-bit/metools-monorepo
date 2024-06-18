@@ -18,6 +18,7 @@ use crate::{
         middlewares::UserMiddleware,
         schema::{AppState, ResponseLogin, ResponseMe, ResponseSignUp},
     },
+    models::verify_tokens::VerifyTokensDBError,
     services::users::UsersServiceError,
 };
 
@@ -67,7 +68,10 @@ impl ResponseError for UsersError {
                 UsersServiceError::GenericDBError(_) => StatusCode::INTERNAL_SERVER_ERROR,
                 UsersServiceError::UsersDBError(_) => StatusCode::INTERNAL_SERVER_ERROR,
                 UsersServiceError::InvalidUserPassword => StatusCode::UNAUTHORIZED,
-                UsersServiceError::VerifyTokensDBError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+                UsersServiceError::VerifyTokensDBError(err) => match err {
+                    VerifyTokensDBError::VerifyTokenNotFound => StatusCode::NOT_FOUND,
+                    _ => StatusCode::INTERNAL_SERVER_ERROR,
+                },
                 UsersServiceError::UnknownError => StatusCode::INTERNAL_SERVER_ERROR,
             },
             Self::UnknownError => StatusCode::INTERNAL_SERVER_ERROR,
@@ -85,14 +89,22 @@ impl ResponseError for UsersError {
                 UsersServiceError::UsersDBError(_) => HttpResponse::build(self.status_code())
                     .insert_header(ContentType::json())
                     .body(json!({"error": "Unknown error", "status": "unknown_error"}).to_string()),
-                UsersServiceError::VerifyTokensDBError(_) => {
-                    HttpResponse::build(self.status_code())
+                UsersServiceError::VerifyTokensDBError(err) => match err {
+                    VerifyTokensDBError::VerifyTokenNotFound => {
+                        HttpResponse::build(self.status_code())
+                            .insert_header(ContentType::json())
+                            .body(
+                                json!({"error": "Verify token not found", "status": "not_found"})
+                                    .to_string(),
+                            )
+                    }
+                    _ => HttpResponse::build(self.status_code())
                         .insert_header(ContentType::json())
                         .body(
                             json!({"error": "Unknown error", "status": "unknown_error"})
                                 .to_string(),
-                        )
-                }
+                        ),
+                },
                 UsersServiceError::InvalidUserPassword => HttpResponse::build(self.status_code())
                     .insert_header(ContentType::json())
                     .body(

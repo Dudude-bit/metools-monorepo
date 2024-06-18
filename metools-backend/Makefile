@@ -11,7 +11,7 @@ gen-swagger:
 	@cargo run gen-swagger api/swagger.yaml
 .PHONY: fmt
 fmt:
-	@cargo +nightly fmt && cargo clippy --fix --allow-dirty
+	@cargo +nightly fmt && cargo clippy --fix --allow-dirty --allow-staged
 .PHONY: run
 run:
 	@DATABASE_URL=${DATABASE_URL} JWT_SECRET=${JWT_SECRET} JWT_MAXAGE=${JWT_MAXAGE} cargo run
