@@ -42,6 +42,7 @@ use crate::{
         controllers::users::users::me,
         controllers::users::users::login,
         controllers::users::users::signup,
+        controllers::users::users::verify_user,
         controllers::rzd::tasks::list_tasks,
         controllers::rzd::tasks::create_task,
         controllers::rzd::tasks::delete_task_by_id_for_user,
