@@ -6,14 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-diesel_migrations = { version = "2.2.0", features = ["postgres"] }
 actix-web = "4.5.1"
-diesel = { version = "2.1.4", features = [
-    "postgres",
-    "postgres_backend",
-    "extras",
-    "without-deprecated",
-] }
 utoipa = { version = "4", features = [
     "actix_extras",
     "chrono",
@@ -43,5 +36,7 @@ actix-web-prometheus = { version = "0.1.0-beta.8", features = ["process"] }
 actix-cors = "0.7.0"
 lettre = "0.11.7"
 dotenv = "0.15.0"
+surrealdb-migrations = "1.5.0"
+surrealdb = "1.5.3"
 
 [dev-dependencies]

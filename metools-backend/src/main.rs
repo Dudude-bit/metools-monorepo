@@ -5,6 +5,7 @@ mod schema;
 mod services;
 mod utils;
 
+use core::panicking::panic;
 use std::{env, fs::File, io::Write, path::Path, thread, thread::sleep, time::Duration};
 
 use actix_cors::Cors;
@@ -17,11 +18,12 @@ use actix_web_prometheus::PrometheusMetricsBuilder;
 use controllers::rzd::tasks::{
     create_task, delete_all_tasks_for_user, delete_task_by_id_for_user, list_tasks,
 };
-use diesel::{r2d2, r2d2::ConnectionManager, PgConnection};
-use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
+
 use lettre::{transport::smtp::authentication::Credentials, SmtpTransport};
 use models::verify_tokens::delete_expired_verify_tokens;
 use services::{mailer::MailerService, tasks::TasksService};
+use surrealdb::{engine::any::connect, opt::auth::Root};
+use surrealdb_migrations::MigrationRunner;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
@@ -68,10 +70,25 @@ async fn health() -> HttpResponse {
     HttpResponse::Ok().finish()
 }
 
-pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!();
+async fn run_migrations(config: &Config) {
+    let db = connect(config.db.surrealdb_url.clone())
+        .await
+        .expect("cant connect to surrealdb");
+    db.signin(Root {
+        username: config.db.surrealdb_username.as_str(),
+        password: config.db.surrealdb_password.as_str(),
+    })
+    .await
+    .expect("cant auth in surrealdb");
+    db.use_ns(config.db.surrealdb_ns.clone())
+        .use_db(config.db.surrealdb_db.clone())
+        .await
+        .expect("cant use ns and db");
 
-fn run_migrations(conn: &mut PgConnection) {
-    conn.run_pending_migrations(MIGRATIONS).unwrap();
+    MigrationRunner::new(&db)
+        .up()
+        .await
+        .expect("cant up migrations");
 }
 
 #[actix_web::main]
@@ -108,16 +125,11 @@ async fn main() -> std::io::Result<()> {
         .credentials(creds)
         .build();
 
-    let manager = ConnectionManager::<PgConnection>::new(config.db_url.clone());
-    let pool: DBPool = r2d2::Pool::builder()
-        .build(manager)
-        .expect("failed to create pg pool");
     if config.run_migrations {
         log::info!("Running migrations");
-        run_migrations(&mut pool.get().unwrap());
+        run_migrations(&config);
         log::info!("Ran migrations");
     }
-    let cloned_pool = pool.clone();
     thread::spawn(move || loop {
         let r = delete_expired_verify_tokens(&mut cloned_pool.get().unwrap());
         match r {

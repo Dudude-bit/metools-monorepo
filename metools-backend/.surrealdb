@@ -1,0 +1,9 @@
+[core]
+    path = "./migration"
+    schema = "full"
+[db]
+    address = "ws://localhost:8080"
+    username = "root"
+    password = "root"
+    ns = "ns"
+    db = "db"

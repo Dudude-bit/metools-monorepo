@@ -1,8 +1,44 @@
 use std::env;
 
+use surrealdb::{
+    engine::remote::ws::{Client, Ws},
+    opt::auth::Root,
+    Surreal,
+};
+
+#[derive(Debug, Clone)]
+pub struct DBConfig {
+    pub surrealdb_url: String,
+    pub surrealdb_username: String,
+    pub surrealdb_password: String,
+    pub surrealdb_ns: String,
+    pub surrealdb_db: String,
+}
+
+impl DBConfig {
+    pub async fn get_connection(&self) -> Surreal<Client> {
+        let db = Surreal::new::<Ws>(self.surrealdb_url.as_str())
+            .await
+            .unwrap();
+
+        db.signin(Root {
+            username: self.surrealdb_username.as_str(),
+            password: self.surrealdb_password.as_str(),
+        })
+        .await
+        .unwrap();
+        db.use_ns(self.surrealdb_ns.as_str())
+            .use_db(self.surrealdb_password.as_str())
+            .await
+            .unwrap();
+
+        return db;
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Config {
-    pub db_url: String,
+    pub db: DBConfig,
     pub service_url: String,
     pub http_address: String,
     pub jwt_secret: String,
@@ -20,9 +56,12 @@ impl Config {
         let http_address = env::var("HTTP_ADDRESS").unwrap_or(String::from("0.0.0.0:8000"));
         let service_url =
             env::var("SERVICE_URL").unwrap_or(format!("http://{}", http_address.clone()));
-        let db_url = env::var("DATABASE_URL").unwrap_or(String::from(
-            "postgresql://postgres:postgres@localhost:5432/metools",
-        ));
+        let surrealdb_url =
+            env::var("SURREALDB_URL").unwrap_or(String::from("ws://localhost:8000"));
+        let surrealdb_username = env::var("SURREALDB_USERNAME").unwrap_or(String::from("root"));
+        let surrealdb_password = env::var("SURREALDB_PASSWORD").unwrap_or(String::from("root"));
+        let surrealdb_ns = env::var("SURREALDB_NS").unwrap_or(String::from("ns"));
+        let surrealdb_db = env::var("SURREALDB_DB").unwrap_or(String::from("db"));
         let jwt_secret = env::var("JWT_SECRET").expect("JWT_SECRET must be set");
         let jwt_maxage = env::var("JWT_MAXAGE").expect("JWT_MAXAGE must be set"); // In minutes
         let run_migrations = env::var("RUN_MIGRATIONS").unwrap_or(String::from("false"));
@@ -33,7 +72,13 @@ impl Config {
         let smtp_password = env::var("SMTP_PASSWORD").expect("SMTP_PASSWORD must be set");
 
         Self {
-            db_url,
+            db: DBConfig {
+                surrealdb_url,
+                surrealdb_username,
+                surrealdb_password,
+                surrealdb_ns,
+                surrealdb_db,
+            },
             http_address,
             service_url,
             jwt_secret,

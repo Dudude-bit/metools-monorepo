@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
 use derive_more::Display;
-use diesel::{prelude::*, result::Error};
+use surrealdb::{sql::Thing, Connection, Surreal};
 use uuid::Uuid;
 
 #[derive(Debug, Display)]
@@ -9,36 +9,27 @@ pub enum VerifyTokensDBError {
     UnknownError(Error),
 }
 
-#[derive(Insertable)]
-#[diesel(table_name = crate::schema::verify_tokens)]
-#[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct NewVerifyToken {
-    pub id: Uuid,
     pub valid_until: DateTime<Utc>,
     pub token: Uuid,
     pub user_id: Uuid,
 }
 
-#[derive(Queryable, Selectable)]
-#[diesel(table_name = crate::schema::verify_tokens)]
-#[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct VerifyTokenReturn {
-    pub id: Uuid,
+    pub id: Thing,
     pub created_at: DateTime<Utc>,
     pub valid_until: DateTime<Utc>,
     pub token: Uuid,
     pub user_id: Uuid,
 }
 
-pub fn create_verify_token(
-    conn: &mut PgConnection,
+pub fn create_verify_token<T: Connection>(
+    conn: &Surreal<T>,
     token_value: Uuid,
     valid_until_value: DateTime<Utc>,
     user_id_value: Uuid,
 ) -> Result<VerifyTokenReturn, VerifyTokensDBError> {
-    use crate::schema::verify_tokens::dsl::*;
     let verify_token = NewVerifyToken {
-        id: Uuid::new_v4(),
         token: token_value,
         valid_until: valid_until_value,
         user_id: user_id_value,
@@ -54,12 +45,10 @@ pub fn create_verify_token(
     }
 }
 
-pub fn get_verify_token_by_value(
-    conn: &mut PgConnection,
+pub fn get_verify_token_by_value<T: Connection>(
+    conn: Surreal<T>,
     token_value: Uuid,
 ) -> Result<VerifyTokenReturn, VerifyTokensDBError> {
-    use crate::schema::verify_tokens::dsl::*;
-
     let r: QueryResult<VerifyTokenReturn> = verify_tokens
         .filter(
             token
@@ -78,8 +67,8 @@ pub fn get_verify_token_by_value(
     }
 }
 
-pub fn delete_verify_token_by_id(
-    conn: &mut PgConnection,
+pub fn delete_verify_token_by_id<T: Connection>(
+    conn: Surreal<T>,
     verify_token_id: Uuid,
 ) -> Result<(), VerifyTokensDBError> {
     use crate::schema::verify_tokens::dsl::*;
@@ -97,7 +86,9 @@ pub fn delete_verify_token_by_id(
     }
 }
 
-pub fn delete_expired_verify_tokens(conn: &mut PgConnection) -> Result<usize, VerifyTokensDBError> {
+pub fn delete_expired_verify_tokens(
+    conn: &Surreal<Connection>,
+) -> Result<usize, VerifyTokensDBError> {
     use crate::schema::verify_tokens::dsl::*;
     let r: QueryResult<usize> =
         diesel::delete(verify_tokens.filter(valid_until.le(chrono::Utc::now()))).execute(conn);

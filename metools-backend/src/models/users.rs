@@ -1,46 +1,32 @@
 use derive_more::Display;
-use diesel::{prelude::*, result::Error};
 use serde::Serialize;
-use utoipa::ToSchema;
+use surrealdb::{sql::Thing, Connection, Surreal};
 use uuid::Uuid;
-
-use crate::schema::users::dsl::users;
 
 #[derive(Debug, Display)]
 pub enum UsersDBError {
     UnknownError(Error),
 }
 
-#[derive(Queryable, Selectable, Serialize, ToSchema)]
-#[diesel(table_name = crate::schema::users)]
-#[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct UserReturn {
     pub id: Uuid,
     pub username: String,
     pub email: String,
 }
-
-#[derive(Queryable, Selectable, Serialize)]
-#[diesel(table_name = crate::schema::users)]
-#[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct GetUserByUsernameReturn {
-    pub id: Uuid,
+    pub id: Thing,
     pub username: String,
     pub password: String,
 }
 
-#[derive(Insertable)]
-#[diesel(table_name = crate::schema::users)]
-#[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct NewUser {
-    pub id: Uuid,
     pub username: String,
     pub email: String,
     pub password: String,
 }
 
-pub fn insert_new_user(
-    conn: &mut PgConnection,
+pub fn insert_new_user<T: Connection>(
+    conn: &Surreal<T>,
     user_username: String,
     user_email: String,
     user_password: String,
@@ -63,12 +49,10 @@ pub fn insert_new_user(
     }
 }
 
-pub fn get_user_by_username(
-    conn: &mut PgConnection,
+pub fn get_user_by_username<T: Connection>(
+    conn: &Surreal<T>,
     user_username: String,
 ) -> Result<GetUserByUsernameReturn, UsersDBError> {
-    use crate::schema::users::dsl::*;
-
     let r: QueryResult<GetUserByUsernameReturn> = users
         .filter(username.eq(user_username))
         .select(GetUserByUsernameReturn::as_select())
@@ -80,9 +64,10 @@ pub fn get_user_by_username(
     }
 }
 
-pub fn get_user_by_id(conn: &mut PgConnection, user_id: Uuid) -> Result<UserReturn, UsersDBError> {
-    use crate::schema::users::dsl::*;
-
+pub fn get_user_by_id<T: Connection>(
+    conn: Surreal<T>,
+    user_id: Uuid,
+) -> Result<UserReturn, UsersDBError> {
     let r: QueryResult<UserReturn> = users
         .filter(id.eq(user_id))
         .select(UserReturn::as_select())
@@ -94,9 +79,10 @@ pub fn get_user_by_id(conn: &mut PgConnection, user_id: Uuid) -> Result<UserRetu
     }
 }
 
-pub fn is_user_verified(conn: &mut PgConnection, user_id: Uuid) -> Result<bool, UsersDBError> {
-    use crate::schema::users::dsl::*;
-
+pub fn is_user_verified<T: Connection>(
+    conn: Surreal<T>,
+    user_id: Uuid,
+) -> Result<bool, UsersDBError> {
     let r: QueryResult<bool> = users
         .filter(id.eq(user_id))
         .select(is_verified)
@@ -108,9 +94,10 @@ pub fn is_user_verified(conn: &mut PgConnection, user_id: Uuid) -> Result<bool, 
     }
 }
 
-pub fn set_user_verified(conn: &mut PgConnection, user_id: Uuid) -> Result<(), UsersDBError> {
-    use crate::schema::users::dsl::*;
-
+pub fn set_user_verified<T: Connection>(
+    conn: Surreal<T>,
+    user_id: Uuid,
+) -> Result<(), UsersDBError> {
     let r: QueryResult<usize> = diesel::update(users)
         .filter(id.eq(user_id))
         .set(is_verified.eq(true))

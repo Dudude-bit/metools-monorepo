@@ -2,13 +2,10 @@ use std::collections::HashMap;
 
 use chrono::{DateTime, Utc};
 use derive_more::Display;
-use diesel::{prelude::*, result::Error};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use utoipa::ToSchema;
+use surrealdb::{sql::Thing, Connection, Error, Surreal};
 use uuid::Uuid;
-
-use crate::schema::rzd_tasks::dsl::rzd_tasks;
 
 #[derive(Debug, Display)]
 pub enum TasksDBError {
@@ -16,45 +13,46 @@ pub enum TasksDBError {
     UnknownError(Error),
 }
 
-#[derive(Insertable)]
-#[diesel(table_name = crate::schema::rzd_tasks)]
-#[diesel(check_for_backend(diesel::pg::Pg))]
+#[derive(Serialize)]
 struct NewTask {
-    id: Uuid,
-    user_id: Uuid,
+    user_id: Thing,
     type_: String,
     data: Value,
 }
-#[derive(Queryable, Selectable, Serialize, Deserialize, Debug, ToSchema)]
-#[diesel(table_name = crate::schema::rzd_tasks)]
-#[diesel(check_for_backend(diesel::pg::Pg))]
+
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Task {
-    pub id: Uuid,
+    pub id: Thing,
     pub created_at: DateTime<Utc>,
     pub type_: String,
     pub data: Value,
-    pub user_id: Uuid,
+    pub user_id: Thing,
 }
 
-pub fn insert_new_task(
-    conn: &mut PgConnection,
-    task_user_id: Uuid,
+const TABLE_NAME: &str = "users";
+
+pub async fn insert_new_task<T: Connection>(
+    conn: Surreal<T>,
+    task_user_id: Thing,
     task_type: String,
     task_data: HashMap<String, String>,
 ) -> Result<Task, TasksDBError> {
-    use crate::schema::rzd_tasks::dsl::*;
-
     let new_task = NewTask {
-        id: Uuid::new_v4(),
         user_id: task_user_id,
         type_: task_type,
         data: json!(task_data),
     };
 
-    let r: QueryResult<Task> = diesel::insert_into(rzd_tasks)
-        .values(&new_task)
-        .returning(Task::as_returning())
-        .get_result(conn);
+    let r: Result<Vec<Task>, Error> = conn.insert(TABLE_NAME).content(new_task).await;
+
+    match r {
+        Ok(tasks) => Ok(tasks[0].clone()),
+        Err(err) => Err(TasksDBError::UnknownError(err)),
+    }
+}
+
+pub async fn list_all_tasks<T: Connection>(conn: Surreal<T>) -> Result<Vec<Task>, TasksDBError> {
+    let r: Result<Vec<Task>, Error> = conn.select(TABLE_NAME).await;
 
     match r {
         Ok(tasks) => Ok(tasks),
@@ -62,34 +60,20 @@ pub fn insert_new_task(
     }
 }
 
-pub fn list_all_tasks(conn: &mut PgConnection) -> Result<Vec<Task>, TasksDBError> {
-    let r = rzd_tasks.select(Task::as_select()).load(conn);
-
-    match r {
-        Ok(tasks) => Ok(tasks),
-        Err(err) => Err(TasksDBError::UnknownError(err)),
-    }
-}
-
-pub fn list_all_users_tasks(
-    conn: &mut PgConnection,
-    task_user_id: Uuid,
+pub async fn list_all_users_tasks<T: Connection>(
+    conn: Surreal<T>,
+    user_id: Thing,
 ) -> Result<Vec<Task>, TasksDBError> {
-    use crate::schema::rzd_tasks::dsl::*;
-
-    let r: QueryResult<Vec<Task>> = rzd_tasks
-        .filter(user_id.eq(task_user_id))
-        .select(Task::as_select())
-        .load(conn);
+    let r = conn.query("SELECT id, created_at, type_, data, user_id FROM type::table($table) WHERE user_id = $user_id").bind((("table", TABLE_NAME), ("user_id", user_id))).await;
 
     match r {
-        Ok(tasks) => Ok(tasks),
+        Ok(tasks) => Ok(tasks.take::(0).unwrap().clone()),
         Err(err) => Err(TasksDBError::UnknownError(err)),
     }
 }
 
-pub fn delete_task_by_id_for_user(
-    conn: &mut PgConnection,
+pub async fn delete_task_by_id_for_user<T: Connection>(
+    conn: Surreal<T>,
     task_user_id: Uuid,
     task_id: Uuid,
 ) -> Result<(), TasksDBError> {
@@ -108,8 +92,8 @@ pub fn delete_task_by_id_for_user(
     }
 }
 
-pub fn delete_all_tasks_for_user(
-    conn: &mut PgConnection,
+pub async fn delete_all_tasks_for_user<T: Connection>(
+    conn: Surreal<T>,
     task_user_id: Uuid,
 ) -> Result<usize, TasksDBError> {
     use crate::schema::rzd_tasks::dsl::*;

@@ -3,11 +3,11 @@ use argon2::{
 };
 use chrono::Days;
 use derive_more::Display;
-use diesel::Connection;
 use rand_core::OsRng;
 use uuid::Uuid;
 
 use crate::{
+    config::DBConfig,
     models::{
         users::{
             get_user_by_id, get_user_by_username, insert_new_user, is_user_verified,
@@ -17,38 +17,30 @@ use crate::{
             create_verify_token, delete_verify_token_by_id, get_verify_token_by_value,
             VerifyTokensDBError,
         },
-        DBPool,
     },
     services::mailer::MailerService,
 };
 
 #[derive(Debug, Display)]
 pub enum UsersServiceError {
-    GenericDBError(diesel::result::Error),
     UsersDBError(UsersDBError),
     VerifyTokensDBError(VerifyTokensDBError),
     InvalidUserPassword,
     UnknownError,
 }
 
-impl From<diesel::result::Error> for UsersServiceError {
-    fn from(e: diesel::result::Error) -> Self {
-        UsersServiceError::GenericDBError(e)
-    }
-}
-
 #[derive(Clone)]
 pub struct UsersService {
-    pool: DBPool,
+    db: DBConfig,
     mailer: MailerService,
 }
 
 impl UsersService {
-    pub fn init(pool: DBPool, mailer: MailerService) -> Self {
-        Self { pool, mailer }
+    pub fn init(db: DBConfig, mailer: MailerService) -> Self {
+        Self { db, mailer }
     }
 
-    pub fn register_user(
+    pub async fn register_user(
         &self,
         username: String,
         email: String,
@@ -104,12 +96,13 @@ impl UsersService {
         }
     }
 
-    pub fn authenticate_user(
+    pub async fn authenticate_user(
         &self,
         username: String,
         password: String,
     ) -> Result<GetUserByUsernameReturn, UsersServiceError> {
-        let r = get_user_by_username(&mut self.pool.get().unwrap(), username);
+        let db =
+        let r = get_user_by_username(self.db.get_connection().await, username);
 
         match r {
             Ok(user) => {
@@ -126,15 +119,15 @@ impl UsersService {
         }
     }
 
-    pub fn get_user_by_id(&self, user_id: Uuid) -> Result<UserReturn, UsersServiceError> {
-        let r = get_user_by_id(&mut self.pool.get().unwrap(), user_id);
+    pub async fn get_user_by_id(&self, user_id: Uuid) -> Result<UserReturn, UsersServiceError> {
+        let r = get_user_by_id(self.db.get_connection().await, user_id);
 
         match r {
             Ok(user) => Ok(user),
             Err(err) => Err(UsersServiceError::UsersDBError(err)),
         }
     }
-    pub fn verify_user(&self, token: Uuid) -> Result<(), UsersServiceError> {
+    pub async fn verify_user(&self, token: Uuid) -> Result<(), UsersServiceError> {
         self.pool.get().unwrap().transaction(|connection| {
             let verify_token = get_verify_token_by_value(connection, token);
             if verify_token.is_err() {
@@ -160,8 +153,8 @@ impl UsersService {
         })
     }
 
-    pub fn get_user_is_verified(&self, user_id: Uuid) -> Result<bool, UsersServiceError> {
-        let r = is_user_verified(&mut self.pool.get().unwrap(), user_id);
+    pub async fn get_user_is_verified(&self, user_id: Uuid) -> Result<bool, UsersServiceError> {
+        let r = is_user_verified(self.db.get_connection().await, user_id);
 
         match r {
             Ok(is_user_verified) => Ok(is_user_verified),
