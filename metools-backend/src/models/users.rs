@@ -1,107 +1,113 @@
 use derive_more::Display;
-use serde::Serialize;
-use surrealdb::{sql::Thing, Connection, Surreal};
-use uuid::Uuid;
+use serde::{Deserialize, Serialize};
+use surrealdb::{opt::PatchOp, sql::Id, Connection, Error, Response, Surreal};
+
+const TABLE_NAME: &str = "rzd_tasks";
 
 #[derive(Debug, Display)]
 pub enum UsersDBError {
+    UserNotFound,
     UnknownError(Error),
 }
 
+#[derive(Serialize, Deserialize, Clone)]
 pub struct UserReturn {
-    pub id: Uuid,
+    pub id: Id,
     pub username: String,
+    pub is_verified: bool,
     pub email: String,
-}
-pub struct GetUserByUsernameReturn {
-    pub id: Thing,
-    pub username: String,
+    pub role: String,
     pub password: String,
 }
 
+#[derive(Serialize)]
 pub struct NewUser {
     pub username: String,
     pub email: String,
     pub password: String,
 }
 
-pub fn insert_new_user<T: Connection>(
+pub async fn insert_new_user<T: Connection>(
     conn: &Surreal<T>,
     user_username: String,
     user_email: String,
     user_password: String,
 ) -> Result<UserReturn, UsersDBError> {
     let new_user = NewUser {
-        id: Uuid::new_v4(),
         username: user_username,
         email: user_email,
         password: user_password,
     };
 
-    let r: QueryResult<UserReturn> = diesel::insert_into(users)
-        .values(&new_user)
-        .returning(UserReturn::as_returning())
-        .get_result(conn);
+    let r: Result<Vec<UserReturn>, Error> = conn.insert(TABLE_NAME).content(new_user).await;
 
     match r {
-        Ok(user) => Ok(user),
+        Ok(users) => Ok(users[0].clone()),
         Err(err) => Err(UsersDBError::UnknownError(err)),
     }
 }
 
-pub fn get_user_by_username<T: Connection>(
+pub async fn get_user_by_username<T: Connection>(
     conn: &Surreal<T>,
-    user_username: String,
-) -> Result<GetUserByUsernameReturn, UsersDBError> {
-    let r: QueryResult<GetUserByUsernameReturn> = users
-        .filter(username.eq(user_username))
-        .select(GetUserByUsernameReturn::as_select())
-        .get_result(conn);
-
-    match r {
-        Ok(user) => Ok(user),
-        Err(err) => Err(UsersDBError::UnknownError(err)),
-    }
-}
-
-pub fn get_user_by_id<T: Connection>(
-    conn: Surreal<T>,
-    user_id: Uuid,
+    username: String,
 ) -> Result<UserReturn, UsersDBError> {
-    let r: QueryResult<UserReturn> = users
-        .filter(id.eq(user_id))
-        .select(UserReturn::as_select())
-        .get_result(conn);
+    let r: Result<Response, Error> = conn
+        .query("SELECT username, is_verified, email, role, password FROM type::table($table) WHERE username = $username")
+        .bind((("table", TABLE_NAME), ("username", username)))
+        .await;
 
     match r {
-        Ok(user) => Ok(user),
+        Ok(mut response) => {
+            let user_take = response.take(0);
+            match user_take {
+                Ok(user_option) => {
+                    return match user_option {
+                        Some(user) => Ok(user),
+                        None => Err(UsersDBError::UserNotFound),
+                    };
+                }
+                Err(err) => Err(UsersDBError::UnknownError(err)),
+            }
+        }
         Err(err) => Err(UsersDBError::UnknownError(err)),
     }
 }
 
-pub fn is_user_verified<T: Connection>(
+pub async fn get_user_by_id<T: Connection>(
     conn: Surreal<T>,
-    user_id: Uuid,
+    user_id: Id,
+) -> Result<UserReturn, UsersDBError> {
+    let r: Result<Option<UserReturn>, Error> = conn.select((TABLE_NAME, user_id)).await;
+
+    match r {
+        Ok(user_option) => {
+            return match user_option {
+                Some(user) => Ok(user),
+                None => Err(UsersDBError::UserNotFound),
+            };
+        }
+        Err(err) => Err(UsersDBError::UnknownError(err)),
+    }
+}
+
+pub async fn is_user_verified<T: Connection>(
+    conn: Surreal<T>,
+    user_id: Id,
 ) -> Result<bool, UsersDBError> {
-    let r: QueryResult<bool> = users
-        .filter(id.eq(user_id))
-        .select(is_verified)
-        .get_result(conn);
-
-    match r {
-        Ok(is_user_verified) => Ok(is_user_verified),
-        Err(err) => Err(UsersDBError::UnknownError(err)),
-    }
+    return match get_user_by_id(conn, user_id).await {
+        Ok(user) => Ok(user.is_verified),
+        Err(err) => Err(err),
+    };
 }
 
-pub fn set_user_verified<T: Connection>(
-    conn: Surreal<T>,
-    user_id: Uuid,
+pub async fn set_user_verified<T: Connection>(
+    conn: &Surreal<T>,
+    user_id: Id,
 ) -> Result<(), UsersDBError> {
-    let r: QueryResult<usize> = diesel::update(users)
-        .filter(id.eq(user_id))
-        .set(is_verified.eq(true))
-        .execute(conn);
+    let r: Result<Option<UserReturn>, Error> = conn
+        .update((TABLE_NAME, user_id))
+        .patch(PatchOp::replace("/is_verified", true))
+        .await;
 
     match r {
         Ok(_) => Ok(()),

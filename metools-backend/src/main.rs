@@ -5,8 +5,7 @@ mod schema;
 mod services;
 mod utils;
 
-use core::panicking::panic;
-use std::{env, fs::File, io::Write, path::Path, thread, thread::sleep, time::Duration};
+use std::{env, fs::File, io::Write, path::Path, time::Duration};
 
 use actix_cors::Cors;
 use actix_web::{
@@ -18,6 +17,7 @@ use actix_web_prometheus::PrometheusMetricsBuilder;
 use controllers::rzd::tasks::{
     create_task, delete_all_tasks_for_user, delete_task_by_id_for_user, list_tasks,
 };
+use tokio;
 
 use lettre::{transport::smtp::authentication::Credentials, SmtpTransport};
 use models::verify_tokens::delete_expired_verify_tokens;
@@ -33,7 +33,6 @@ use crate::{
         schema::AppState,
         users::users::{login, me, signup, verify_user},
     },
-    models::DBPool,
     services::users::UsersService,
 };
 
@@ -130,8 +129,10 @@ async fn main() -> std::io::Result<()> {
         run_migrations(&config);
         log::info!("Ran migrations");
     }
-    thread::spawn(move || loop {
-        let r = delete_expired_verify_tokens(&mut cloned_pool.get().unwrap());
+    let cloned_db_config = config.db.clone();
+    tokio::spawn(move || loop {
+        let connection = cloned_db_config.get_connection().await;
+        let r = delete_expired_verify_tokens(connection);
         match r {
             Ok(c) => log::info!("Deleted {c} verify tokens"),
             Err(err) => log::error!("Error on loop delete_expired_verify_tokens: {err}"),

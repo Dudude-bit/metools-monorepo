@@ -9,8 +9,8 @@ use actix_web::{
 use derive_more::Display;
 use serde::Deserialize;
 use serde_json::json;
+use surrealdb::sql::Id;
 use utoipa::ToSchema;
-use uuid::Uuid;
 use validator::{Validate, ValidateArgs, ValidationError, ValidationErrors};
 
 use crate::{
@@ -125,7 +125,7 @@ pub struct CreateTaskData {
 
 #[derive(Deserialize)]
 struct DeleteTaskData {
-    task_id: Uuid,
+    task_id: Id,
 }
 
 #[utoipa::path(
@@ -144,9 +144,7 @@ pub async fn list_tasks(
 ) -> Result<web::Json<ResponseListTasks>, TasksError> {
     let user_id = user.user_id;
 
-    let r = web::block(move || state.tasks_service.list_tasks_for_user(user_id))
-        .await
-        .unwrap();
+    let r = state.tasks_service.list_tasks_for_user(user_id).await;
 
     match r {
         Ok(tasks) => Ok(web::Json(ResponseListTasks {
@@ -176,15 +174,10 @@ pub async fn create_task(
     let user_id = user.user_id;
     match data.validate_with_args(&ValidateCreateTaskDataContext(data.task_type.clone())) {
         Ok(_) => {
-            let r = web::block(move || {
-                state.tasks_service.create_task_for_user(
-                    user_id,
-                    data.task_type.clone(),
-                    data.data.clone(),
-                )
-            })
-            .await
-            .unwrap();
+            let r = state
+                .tasks_service
+                .create_task_for_user(user_id, data.task_type.clone(), data.data.clone())
+                .await;
 
             match r {
                 Ok(task) => Ok(web::Json(ResponseCreateTask {
@@ -216,13 +209,10 @@ pub async fn delete_task_by_id_for_user(
 ) -> Result<web::Json<ResponseDeleteTaskByIdForUser>, TasksError> {
     let user_id = user.user_id;
 
-    let r = web::block(move || {
-        state
-            .tasks_service
-            .delete_task_by_id_for_user(user_id, data.task_id)
-    })
-    .await
-    .unwrap();
+    let r = state
+        .tasks_service
+        .delete_task_by_id_for_user(user_id, data.task_id.clone())
+        .await;
 
     match r {
         Ok(_) => Ok(web::Json(ResponseDeleteTaskByIdForUser {
@@ -249,9 +239,7 @@ pub async fn delete_all_tasks_for_user(
 ) -> Result<web::Json<ResponseDeleteTaskByIdForUser>, TasksError> {
     let user_id = user.user_id;
 
-    let r = web::block(move || state.tasks_service.delete_all_tasks_for_user(user_id))
-        .await
-        .unwrap();
+    let r = state.tasks_service.delete_all_tasks_for_user(user_id).await;
 
     match r {
         Ok(r) => Ok(web::Json(ResponseDeleteTaskByIdForUser {

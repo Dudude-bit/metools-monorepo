@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use derive_more::Display;
+use surrealdb::sql::Id;
 use uuid::Uuid;
 
 use crate::{
@@ -25,8 +26,8 @@ impl TasksService {
     pub fn init(db: DBConfig) -> Self {
         Self { db }
     }
-    pub async fn list_tasks_for_user(&self, user_id: Uuid) -> Result<Vec<Task>, TasksServiceError> {
-        let tasks = list_all_users_tasks(self.db.get_connection().await, user_id);
+    pub async fn list_tasks_for_user(&self, user_id: Id) -> Result<Vec<Task>, TasksServiceError> {
+        let tasks = list_all_users_tasks(self.db.get_connection().await, user_id).await;
         match tasks {
             Ok(tasks) => Ok(tasks),
             Err(err) => Err(TasksServiceError::TasksDBError(err)),
@@ -35,7 +36,7 @@ impl TasksService {
 
     pub async fn create_task_for_user(
         &self,
-        user_id: Uuid,
+        user_id: Id,
         task_type: String,
         task_data: HashMap<String, String>,
     ) -> Result<Task, TasksServiceError> {
@@ -44,7 +45,8 @@ impl TasksService {
             user_id,
             task_type,
             task_data,
-        );
+        )
+        .await;
 
         match r {
             Ok(task) => Ok(task),
@@ -52,12 +54,12 @@ impl TasksService {
         }
     }
 
-    pub fn delete_task_by_id_for_user(
+    pub async fn delete_task_by_id_for_user(
         &self,
-        user_id: Uuid,
-        task_id: Uuid,
+        user_id: Id,
+        task_id: Id,
     ) -> Result<(), TasksServiceError> {
-        let r = delete_task_by_id_for_user(self.db.get_connection().await, user_id, task_id);
+        let r = delete_task_by_id_for_user(self.db.get_connection().await, user_id, task_id).await;
 
         match r {
             Ok(()) => Ok(()),
@@ -65,10 +67,7 @@ impl TasksService {
         }
     }
 
-    pub async fn delete_all_tasks_for_user(
-        &self,
-        user_id: Uuid,
-    ) -> Result<usize, TasksServiceError> {
+    pub async fn delete_all_tasks_for_user(&self, user_id: Id) -> Result<usize, TasksServiceError> {
         let r = delete_all_tasks_for_user(self.db.get_connection().await, user_id).await;
 
         match r {

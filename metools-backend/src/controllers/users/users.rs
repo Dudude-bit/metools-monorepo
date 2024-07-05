@@ -9,8 +9,8 @@ use derive_more::Display;
 use jsonwebtoken::{encode, EncodingKey, Header};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use surrealdb::sql::Id;
 use utoipa::ToSchema;
-use uuid::Uuid;
 use validator::{Validate, ValidationErrors};
 
 use crate::{
@@ -42,7 +42,7 @@ pub struct LoginData {
 
 #[derive(Deserialize)]
 pub struct VerifyData {
-    pub verify_key: Uuid,
+    pub verify_key: Id,
     pub redirect: String,
 }
 
@@ -65,13 +65,13 @@ impl ResponseError for UsersError {
         match self {
             Self::InvalidInputData(_) => StatusCode::BAD_REQUEST,
             Self::UsersServiceError(service_err) => match service_err {
-                UsersServiceError::GenericDBError(_) => StatusCode::INTERNAL_SERVER_ERROR,
                 UsersServiceError::UsersDBError(_) => StatusCode::INTERNAL_SERVER_ERROR,
                 UsersServiceError::InvalidUserPassword => StatusCode::UNAUTHORIZED,
                 UsersServiceError::VerifyTokensDBError(err) => match err {
                     VerifyTokensDBError::VerifyTokenNotFound => StatusCode::NOT_FOUND,
                     _ => StatusCode::INTERNAL_SERVER_ERROR,
                 },
+                UsersServiceError::CommitError(_) => StatusCode::INTERNAL_SERVER_ERROR,
                 UsersServiceError::UnknownError => StatusCode::INTERNAL_SERVER_ERROR,
             },
             Self::UnknownError => StatusCode::INTERNAL_SERVER_ERROR,
@@ -83,9 +83,6 @@ impl ResponseError for UsersError {
                 .insert_header(ContentType::json())
                 .body(json!({"error": "Invalid input data", "status": "invalid_data"}).to_string()),
             Self::UsersServiceError(service_err) => match service_err {
-                UsersServiceError::GenericDBError(_) => HttpResponse::build(self.status_code())
-                    .insert_header(ContentType::json())
-                    .body(json!({"error": "Unknown error", "status": "unknown_error"}).to_string()),
                 UsersServiceError::UsersDBError(_) => HttpResponse::build(self.status_code())
                     .insert_header(ContentType::json())
                     .body(json!({"error": "Unknown error", "status": "unknown_error"}).to_string()),
@@ -111,6 +108,9 @@ impl ResponseError for UsersError {
                         json!({"error": "Invalid credentials", "status": "invalid_credentials"})
                             .to_string(),
                     ),
+                UsersServiceError::CommitError(_) => HttpResponse::build(self.status_code())
+                    .insert_header(ContentType::json())
+                    .body(json!({"error": "Unknown error", "status": "unknown_error"}).to_string()),
                 UsersServiceError::UnknownError => HttpResponse::build(self.status_code())
                     .insert_header(ContentType::json())
                     .body(json!({"error": "Unknown error", "status": "unknown_error"}).to_string()),
@@ -137,9 +137,7 @@ pub async fn me(
     data: web::Data<AppState>,
 ) -> Result<web::Json<ResponseMe>, UsersError> {
     let user_id = user.user_id;
-    let r = web::block(move || data.users_service.get_user_by_id(user_id))
-        .await
-        .unwrap();
+    let r = data.users_service.get_user_by_id(user_id).await;
 
     match r {
         Ok(user) => Ok(web::Json(ResponseMe {
@@ -164,15 +162,14 @@ pub async fn signup(
 ) -> Result<web::Json<ResponseSignUp>, UsersError> {
     match data.validate() {
         Ok(_) => {
-            let r = web::block(move || {
-                state.users_service.register_user(
+            let r = state
+                .users_service
+                .register_user(
                     data.username.clone(),
                     data.email.clone(),
                     data.password.clone(),
                 )
-            })
-            .await
-            .unwrap();
+                .await;
             match r {
                 Ok(user) => Ok(web::Json(ResponseSignUp {
                     status: "success".to_string(),
@@ -198,10 +195,8 @@ pub async fn verify_user(
     query_data: web::Query<VerifyData>,
     state: web::Data<AppState>,
 ) -> Result<web::Redirect, UsersError> {
-    let verify_key = query_data.verify_key;
-    let r = web::block(move || state.users_service.verify_user(verify_key))
-        .await
-        .unwrap();
+    let verify_key = query_data.verify_key.clone();
+    let r = state.users_service.verify_user(verify_key).await;
 
     match r {
         Ok(()) => Ok(web::Redirect::to(query_data.redirect.clone()).permanent()),
@@ -224,13 +219,10 @@ pub async fn login(
     match data.validate() {
         Ok(_) => {
             let inner_state = state.clone();
-            let r = web::block(move || {
-                inner_state
-                    .users_service
-                    .authenticate_user(data.username.clone(), data.password.clone())
-            })
-            .await
-            .unwrap();
+            let r = inner_state
+                .users_service
+                .authenticate_user(data.username.clone(), data.password.clone())
+                .await;
 
             match r {
                 Ok(user) => {

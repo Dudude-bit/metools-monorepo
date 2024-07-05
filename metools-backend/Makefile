@@ -4,8 +4,6 @@ JWT_MAXAGE ?= 6000
 
 default: run
 .PHONY: gen-db-schema
-gen-db-schema:
-	@DATABASE_URL=${DATABASE_URL} diesel migration run
 .PHONY: gen-swagger
 gen-swagger:
 	@cargo run gen-swagger api/swagger.yaml
