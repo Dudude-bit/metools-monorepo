@@ -8,7 +8,6 @@ use surrealdb::{
     sql::{Id, Thing},
     Connection, Error, Response, Surreal,
 };
-use uuid::Uuid;
 
 #[derive(Debug, Display)]
 pub enum TasksDBError {
@@ -80,16 +79,15 @@ pub async fn delete_task_by_id_for_user<T: Connection>(
     user_id: Id,
     task_id: Id,
 ) -> Result<(), TasksDBError> {
-    use crate::schema::rzd_tasks::dsl::*;
-    let r = diesel::delete(rzd_tasks.filter(user_id.eq(task_user_id).and(id.eq(task_id))))
-        .execute(conn);
+    let r = conn.query("SELECT count() as deleted_tasks FROM (DELETE type::table($table) WHERE user_id = $user_id AND id = $task_id RETURN BEFORE)").bind((("table", TABLE_NAME), ("user_id", user_id), ("task_id", task_id))).await;
     match r {
-        Ok(r) => {
-            if r == 0 {
-                Err(TasksDBError::NoDeletedTask)
-            } else {
-                Ok(())
+        Ok(mut r) => {
+            let surreal_response = r.take::<Vec<HashMap<String, usize>>>(0).unwrap()[0].clone();
+            let num_deleted_tasks = *surreal_response.get("deleted_tasks").unwrap();
+            if num_deleted_tasks == 0 {
+                return Err(TasksDBError::NoDeletedTask);
             }
+            Ok(())
         }
         Err(err) => Err(TasksDBError::UnknownError(err)),
     }
@@ -97,12 +95,17 @@ pub async fn delete_task_by_id_for_user<T: Connection>(
 
 pub async fn delete_all_tasks_for_user<T: Connection>(
     conn: Surreal<T>,
-    task_user_id: Id,
+    user_id: Id,
 ) -> Result<usize, TasksDBError> {
-    use crate::schema::rzd_tasks::dsl::*;
-    let r = diesel::delete(rzd_tasks.filter(user_id.eq(task_user_id))).execute(conn);
+    let r = conn
+        .query("SELECT count() as deleted_tasks FROM (DELETE type::table($table) WHERE user_id = $user_id RETURN BEFORE)")
+        .bind((("table", TABLE_NAME), ("user_id", user_id)))
+        .await;
     match r {
-        Ok(r) => Ok(r),
+        Ok(mut r) => {
+            let surreal_response = r.take::<Vec<HashMap<String, usize>>>(0).unwrap()[0].clone();
+            Ok(*surreal_response.get("deleted_tasks").unwrap())
+        }
         Err(err) => Err(TasksDBError::UnknownError(err)),
     }
 }

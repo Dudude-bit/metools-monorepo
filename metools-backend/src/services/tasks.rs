@@ -2,7 +2,6 @@ use std::collections::HashMap;
 
 use derive_more::Display;
 use surrealdb::sql::Id;
-use uuid::Uuid;
 
 use crate::{
     config::DBConfig,

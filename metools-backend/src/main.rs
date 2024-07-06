@@ -1,7 +1,6 @@
 mod config;
 mod controllers;
 mod models;
-mod schema;
 mod services;
 mod utils;
 
@@ -17,8 +16,6 @@ use actix_web_prometheus::PrometheusMetricsBuilder;
 use controllers::rzd::tasks::{
     create_task, delete_all_tasks_for_user, delete_task_by_id_for_user, list_tasks,
 };
-use tokio;
-
 use lettre::{transport::smtp::authentication::Credentials, SmtpTransport};
 use models::verify_tokens::delete_expired_verify_tokens;
 use services::{mailer::MailerService, tasks::TasksService};
@@ -59,8 +56,6 @@ use crate::{
         crate::controllers::schema::ResponseCreateTask,
         crate::controllers::schema::ResponseDeleteTaskByIdForUser,
         crate::controllers::schema::ResponseDeleteAllTasksForUser,
-        crate::models::users::UserReturn,
-        crate::models::rzd::tasks::Task
     ))
 )]
 struct OpenAPI;
@@ -116,7 +111,7 @@ async fn main() -> std::io::Result<()> {
 
     env_logger::init();
     let config = Config::init();
-    let creds = Credentials::new(config.smtp_username, config.smtp_password);
+    let creds = Credentials::new(config.smtp_username.clone(), config.smtp_password.clone());
 
     // Open a remote connection to gmail
     let smtp_transport = SmtpTransport::relay(config.smtp_hostname.as_str())
@@ -126,18 +121,20 @@ async fn main() -> std::io::Result<()> {
 
     if config.run_migrations {
         log::info!("Running migrations");
-        run_migrations(&config);
+        run_migrations(&config).await;
         log::info!("Ran migrations");
     }
-    let cloned_db_config = config.db.clone();
-    tokio::spawn(move || loop {
-        let connection = cloned_db_config.get_connection().await;
-        let r = delete_expired_verify_tokens(connection);
-        match r {
-            Ok(c) => log::info!("Deleted {c} verify tokens"),
-            Err(err) => log::error!("Error on loop delete_expired_verify_tokens: {err}"),
+    let clonned_db_config = config.db.clone();
+    tokio::spawn(async move {
+        loop {
+            let connection = clonned_db_config.clone().get_connection().await;
+            let r = delete_expired_verify_tokens(connection).await;
+            match r {
+                Ok(c) => log::info!("Deleted {c} verify tokens"),
+                Err(err) => log::error!("Error on loop delete_expired_verify_tokens: {err}"),
+            }
+            tokio::time::sleep(Duration::from_secs(60)).await;
         }
-        sleep(Duration::from_secs(60));
     });
     HttpServer::new(move || {
         let cors = Cors::default()
@@ -169,14 +166,14 @@ async fn main() -> std::io::Result<()> {
             .wrap(cors)
             .app_data(web::Data::new(AppState {
                 users_service: UsersService::init(
-                    pool.clone(),
+                    config.db.clone(),
                     MailerService::init(
                         smtp_transport.clone(),
                         config.smtp_from.clone(),
                         config.service_url.clone(),
                     ),
                 ),
-                tasks_service: TasksService::init(pool.clone()),
+                tasks_service: TasksService::init(config.db.clone()),
                 jwt_secret: config.jwt_secret.clone(),
                 jwt_maxage: config.jwt_maxage,
             }))

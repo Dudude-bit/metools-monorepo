@@ -2559,6 +2559,7 @@ dependencies = [
  "serde_yaml",
  "surrealdb",
  "surrealdb-migrations",
+ "tokio",
  "utoipa",
  "utoipa-swagger-ui",
  "uuid",

@@ -32,7 +32,7 @@ impl DBConfig {
             .await
             .unwrap();
 
-        return db;
+        db
     }
 }
 

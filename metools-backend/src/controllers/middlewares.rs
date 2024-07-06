@@ -1,5 +1,4 @@
-use std::future::{ready, Future, Ready};
-use std::pin::Pin;
+use std::{future::Future, pin::Pin};
 
 use actix_web::{
     dev::Payload,
@@ -19,18 +18,17 @@ pub struct UserMiddleware {
 impl FromRequest for UserMiddleware {
     type Error = ActixWebError;
     type Future = Pin<Box<dyn Future<Output = Result<Self, Self::Error>>>>;
+
     fn from_request(req: &HttpRequest, _: &mut Payload) -> Self::Future {
-        let data = req.app_data::<web::Data<AppState>>().unwrap();
-
-        let token = req.headers().get("X-API-AUTH-TOKEN");
-
+        let req = req.clone();
         Box::pin(async move {
+            let data = req.app_data::<web::Data<AppState>>().unwrap();
+            let token = req.headers().get("X-API-AUTH-TOKEN");
             if token.is_none() {
                 return Err(ErrorUnauthorized(web::Json(
                     json!({"status": "unauthorized", "error": "Unauthorized"}),
                 )));
             }
-
             let token = token.unwrap().to_str();
 
             if token.is_err() {
@@ -52,8 +50,11 @@ impl FromRequest for UserMiddleware {
                 }
             };
 
-            let user_id = uuid::Uuid::parse_str(claims.sub.as_str()).unwrap();
-            let is_user_verified = data.users_service.get_user_is_verified(user_id).await;
+            let user_id = Id::from(claims.sub.as_str());
+            let is_user_verified = data
+                .users_service
+                .get_user_is_verified(user_id.clone())
+                .await;
             match is_user_verified {
                 Ok(is_user_verified) => {
                     if !is_user_verified {
@@ -63,14 +64,14 @@ impl FromRequest for UserMiddleware {
                     }
                 }
                 Err(_) => {
-                    return ready(Err(ErrorInternalServerError(web::Json(
+                    return Err(ErrorInternalServerError(web::Json(
                         json!({"status": "unknown_error", "error": "Unknown error"}),
-                    ))))
+                    )));
                 }
             }
-            ready(Ok(Self {
+            Ok(Self {
                 user_id: user_id.to_owned(),
-            }))
+            })
         })
     }
 }

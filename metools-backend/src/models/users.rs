@@ -60,12 +60,10 @@ pub async fn get_user_by_username<T: Connection>(
         Ok(mut response) => {
             let user_take = response.take(0);
             match user_take {
-                Ok(user_option) => {
-                    return match user_option {
-                        Some(user) => Ok(user),
-                        None => Err(UsersDBError::UserNotFound),
-                    };
-                }
+                Ok(user_option) => match user_option {
+                    Some(user) => Ok(user),
+                    None => Err(UsersDBError::UserNotFound),
+                },
                 Err(err) => Err(UsersDBError::UnknownError(err)),
             }
         }
@@ -80,12 +78,10 @@ pub async fn get_user_by_id<T: Connection>(
     let r: Result<Option<UserReturn>, Error> = conn.select((TABLE_NAME, user_id)).await;
 
     match r {
-        Ok(user_option) => {
-            return match user_option {
-                Some(user) => Ok(user),
-                None => Err(UsersDBError::UserNotFound),
-            };
-        }
+        Ok(user_option) => match user_option {
+            Some(user) => Ok(user),
+            None => Err(UsersDBError::UserNotFound),
+        },
         Err(err) => Err(UsersDBError::UnknownError(err)),
     }
 }
@@ -94,10 +90,10 @@ pub async fn is_user_verified<T: Connection>(
     conn: Surreal<T>,
     user_id: Id,
 ) -> Result<bool, UsersDBError> {
-    return match get_user_by_id(conn, user_id).await {
+    match get_user_by_id(conn, user_id).await {
         Ok(user) => Ok(user.is_verified),
         Err(err) => Err(err),
-    };
+    }
 }
 
 pub async fn set_user_verified<T: Connection>(

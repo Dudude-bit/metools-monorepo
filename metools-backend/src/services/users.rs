@@ -63,7 +63,7 @@ impl UsersService {
                 )
                 .await;
                 if r_user.is_err() {
-                    transaction.cancel().await;
+                    let _ = transaction.cancel().await;
                     return Err(UsersServiceError::UsersDBError(r_user.err().unwrap()));
                 }
                 let r_user = r_user.unwrap();
@@ -79,7 +79,7 @@ impl UsersService {
                 .await;
 
                 if r_verify_token.is_err() {
-                    transaction.cancel().await;
+                    let _ = transaction.cancel().await;
                     return Err(UsersServiceError::VerifyTokensDBError(
                         r_verify_token.err().unwrap(),
                     ));
@@ -101,7 +101,7 @@ impl UsersService {
                         Ok(r_user)
                     }
                     Err(err) => {
-                        transaction.cancel().await;
+                        let _ = transaction.cancel().await;
                         log::error!("Error on sending email: {err}");
                         Err(UsersServiceError::UnknownError)
                     }
@@ -148,7 +148,7 @@ impl UsersService {
         let transaction = self.db.get_connection().await.transaction().await.unwrap();
         let verify_token = get_verify_token_by_value(transaction.deref(), token).await;
         if verify_token.is_err() {
-            transaction.cancel().await;
+            let _ = transaction.cancel().await;
             return Err(UsersServiceError::VerifyTokensDBError(
                 verify_token.err().unwrap(),
             ));
@@ -158,7 +158,7 @@ impl UsersService {
         let r_set_user_verified =
             set_user_verified(transaction.deref(), verify_token.user_id).await;
         if r_set_user_verified.is_err() {
-            transaction.cancel().await;
+            let _ = transaction.cancel().await;
             return Err(UsersServiceError::UsersDBError(
                 r_set_user_verified.err().unwrap(),
             ));
@@ -175,7 +175,7 @@ impl UsersService {
                 Ok(())
             }
             Err(err) => {
-                transaction.cancel().await;
+                let _ = transaction.cancel().await;
                 Err(UsersServiceError::VerifyTokensDBError(err))
             }
         }
