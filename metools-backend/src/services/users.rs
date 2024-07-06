@@ -136,7 +136,7 @@ impl UsersService {
         }
     }
 
-    pub async fn get_user_by_id(&self, user_id: Id) -> Result<UserReturn, UsersServiceError> {
+    pub async fn get_user_by_id(&self, user_id: String) -> Result<UserReturn, UsersServiceError> {
         let r = get_user_by_id(self.db.get_connection().await, user_id).await;
 
         match r {
@@ -144,7 +144,7 @@ impl UsersService {
             Err(err) => Err(UsersServiceError::UsersDBError(err)),
         }
     }
-    pub async fn verify_user(&self, token: Id) -> Result<(), UsersServiceError> {
+    pub async fn verify_user(&self, token: String) -> Result<(), UsersServiceError> {
         let transaction = self.db.get_connection().await.transaction().await.unwrap();
         let verify_token = get_verify_token_by_value(transaction.deref(), token).await;
         if verify_token.is_err() {
@@ -181,7 +181,7 @@ impl UsersService {
         }
     }
 
-    pub async fn get_user_is_verified(&self, user_id: Id) -> Result<bool, UsersServiceError> {
+    pub async fn get_user_is_verified(&self, user_id: String) -> Result<bool, UsersServiceError> {
         let r = is_user_verified(self.db.get_connection().await, user_id).await;
 
         match r {

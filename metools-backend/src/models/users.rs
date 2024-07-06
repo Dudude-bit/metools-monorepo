@@ -12,7 +12,7 @@ pub enum UsersDBError {
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct UserReturn {
-    pub id: Id,
+    pub id: String,
     pub username: String,
     pub is_verified: bool,
     pub email: String,
@@ -73,7 +73,7 @@ pub async fn get_user_by_username<T: Connection>(
 
 pub async fn get_user_by_id<T: Connection>(
     conn: Surreal<T>,
-    user_id: Id,
+    user_id: String,
 ) -> Result<UserReturn, UsersDBError> {
     let r: Result<Option<UserReturn>, Error> = conn.select((TABLE_NAME, user_id)).await;
 
@@ -88,7 +88,7 @@ pub async fn get_user_by_id<T: Connection>(
 
 pub async fn is_user_verified<T: Connection>(
     conn: Surreal<T>,
-    user_id: Id,
+    user_id: String,
 ) -> Result<bool, UsersDBError> {
     match get_user_by_id(conn, user_id).await {
         Ok(user) => Ok(user.is_verified),
@@ -98,7 +98,7 @@ pub async fn is_user_verified<T: Connection>(
 
 pub async fn set_user_verified<T: Connection>(
     conn: &Surreal<T>,
-    user_id: Id,
+    user_id: String,
 ) -> Result<(), UsersDBError> {
     let r: Result<Option<UserReturn>, Error> = conn
         .update((TABLE_NAME, user_id))

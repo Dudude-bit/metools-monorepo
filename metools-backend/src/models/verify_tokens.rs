@@ -18,13 +18,13 @@ pub enum VerifyTokensDBError {
 pub struct NewVerifyToken {
     pub valid_until: DateTime<Utc>,
     pub token: Uuid,
-    pub user_id: Id,
+    pub user_id: String,
 }
 
 #[derive(Deserialize, Clone)]
 pub struct VerifyTokenReturn {
-    pub id: Id,
-    pub user_id: Id,
+    pub id: String,
+    pub user_id: String,
     pub created_at: DateTime<Utc>,
     pub valid_until: DateTime<Utc>,
     pub token: Uuid,
@@ -34,7 +34,7 @@ pub async fn create_verify_token<T: Connection>(
     conn: &Surreal<T>,
     token: Uuid,
     valid_until: DateTime<Utc>,
-    user_id: Id,
+    user_id: String,
 ) -> Result<VerifyTokenReturn, VerifyTokensDBError> {
     let verify_token = NewVerifyToken {
         token,
@@ -52,7 +52,7 @@ pub async fn create_verify_token<T: Connection>(
 
 pub async fn get_verify_token_by_value<T: Connection>(
     conn: &Surreal<T>,
-    token: Id,
+    token: String,
 ) -> Result<VerifyTokenReturn, VerifyTokensDBError> {
     let r: Result<Response, Error> = conn.query("SELECT id, user_id, created_at, valid_until, token FROM type::table($table) WHERE token = $token AND valid_until > $valid_until").bind((("table", TABLE_NAME), ("token", token), ("valid_until", chrono::Utc::now()))).await;
     match r {
@@ -76,7 +76,7 @@ pub async fn get_verify_token_by_value<T: Connection>(
 
 pub async fn delete_verify_token_by_id<T: Connection>(
     conn: &Surreal<T>,
-    verify_token_id: Id,
+    verify_token_id: String,
 ) -> Result<(), VerifyTokensDBError> {
     let r = conn.query("SELECT count() as deleted_verify_tokens FROM (DELETE type::table($table) WHERE id = $verify_token_id RETURN BEFORE)").bind((("table", TABLE_NAME), ("verify_token_id", verify_token_id))).await;
     match r {

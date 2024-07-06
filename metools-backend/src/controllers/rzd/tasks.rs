@@ -125,7 +125,7 @@ pub struct CreateTaskData {
 
 #[derive(Deserialize)]
 struct DeleteTaskData {
-    task_id: Id,
+    task_id: String,
 }
 
 #[utoipa::path(

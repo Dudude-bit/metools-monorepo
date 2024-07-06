@@ -12,7 +12,7 @@ use surrealdb::sql::Id;
 use crate::controllers::{schema::AppState, users::users::TokenClaims};
 
 pub struct UserMiddleware {
-    pub user_id: Id,
+    pub user_id: String,
 }
 
 impl FromRequest for UserMiddleware {
@@ -50,7 +50,7 @@ impl FromRequest for UserMiddleware {
                 }
             };
 
-            let user_id = Id::from(claims.sub.as_str());
+            let user_id = claims.sub.to_string();
             let is_user_verified = data
                 .users_service
                 .get_user_is_verified(user_id.clone())

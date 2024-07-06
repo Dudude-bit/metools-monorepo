@@ -42,7 +42,7 @@ pub struct LoginData {
 
 #[derive(Deserialize)]
 pub struct VerifyData {
-    pub verify_key: Id,
+    pub verify_key: String,
     pub redirect: String,
 }
 

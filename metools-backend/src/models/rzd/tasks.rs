@@ -18,25 +18,25 @@ pub enum TasksDBError {
 
 #[derive(Serialize)]
 struct NewTask {
-    user_id: Id,
+    user_id: String,
     type_: String,
     data: Value,
 }
 
 #[derive(Serialize, Deserialize, Clone, ToSchema)]
 pub struct Task {
-    pub id: Id,
+    pub id: String,
     pub created_at: DateTime<Utc>,
     pub type_: String,
     pub data: Value,
-    pub user_id: Id,
+    pub user_id: String,
 }
 
 const TABLE_NAME: &str = "rzd_tasks";
 
 pub async fn insert_new_task<T: Connection>(
     conn: Surreal<T>,
-    task_user_id: Id,
+    task_user_id: String,
     task_type: String,
     task_data: HashMap<String, String>,
 ) -> Result<Task, TasksDBError> {
@@ -65,7 +65,7 @@ pub async fn list_all_tasks<T: Connection>(conn: Surreal<T>) -> Result<Vec<Task>
 
 pub async fn list_all_users_tasks<T: Connection>(
     conn: Surreal<T>,
-    user_id: Id,
+    user_id: String,
 ) -> Result<Vec<Task>, TasksDBError> {
     let r: Result<Response, Error> = conn.query("SELECT id, created_at, type_, data, user_id FROM type::table($table) WHERE user_id = $user_id").bind((("table", TABLE_NAME), ("user_id", user_id))).await;
 
@@ -77,8 +77,8 @@ pub async fn list_all_users_tasks<T: Connection>(
 
 pub async fn delete_task_by_id_for_user<T: Connection>(
     conn: Surreal<T>,
-    user_id: Id,
-    task_id: Id,
+    user_id: String,
+    task_id: String,
 ) -> Result<(), TasksDBError> {
     let r = conn.query("SELECT count() as deleted_tasks FROM (DELETE type::table($table) WHERE user_id = $user_id AND id = $task_id RETURN BEFORE)").bind((("table", TABLE_NAME), ("user_id", user_id), ("task_id", task_id))).await;
     match r {
@@ -96,7 +96,7 @@ pub async fn delete_task_by_id_for_user<T: Connection>(
 
 pub async fn delete_all_tasks_for_user<T: Connection>(
     conn: Surreal<T>,
-    user_id: Id,
+    user_id: String,
 ) -> Result<usize, TasksDBError> {
     let r = conn
         .query("SELECT count() as deleted_tasks FROM (DELETE type::table($table) WHERE user_id = $user_id RETURN BEFORE)")

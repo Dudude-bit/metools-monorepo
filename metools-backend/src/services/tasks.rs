@@ -25,7 +25,10 @@ impl TasksService {
     pub fn init(db: DBConfig) -> Self {
         Self { db }
     }
-    pub async fn list_tasks_for_user(&self, user_id: Id) -> Result<Vec<Task>, TasksServiceError> {
+    pub async fn list_tasks_for_user(
+        &self,
+        user_id: String,
+    ) -> Result<Vec<Task>, TasksServiceError> {
         let tasks = list_all_users_tasks(self.db.get_connection().await, user_id).await;
         match tasks {
             Ok(tasks) => Ok(tasks),
@@ -35,7 +38,7 @@ impl TasksService {
 
     pub async fn create_task_for_user(
         &self,
-        user_id: Id,
+        user_id: String,
         task_type: String,
         task_data: HashMap<String, String>,
     ) -> Result<Task, TasksServiceError> {
@@ -55,8 +58,8 @@ impl TasksService {
 
     pub async fn delete_task_by_id_for_user(
         &self,
-        user_id: Id,
-        task_id: Id,
+        user_id: String,
+        task_id: String,
     ) -> Result<(), TasksServiceError> {
         let r = delete_task_by_id_for_user(self.db.get_connection().await, user_id, task_id).await;
 
@@ -66,7 +69,10 @@ impl TasksService {
         }
     }
 
-    pub async fn delete_all_tasks_for_user(&self, user_id: Id) -> Result<usize, TasksServiceError> {
+    pub async fn delete_all_tasks_for_user(
+        &self,
+        user_id: String,
+    ) -> Result<usize, TasksServiceError> {
         let r = delete_all_tasks_for_user(self.db.get_connection().await, user_id).await;
 
         match r {
