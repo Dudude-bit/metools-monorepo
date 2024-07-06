@@ -56,6 +56,7 @@ use crate::{
         crate::controllers::schema::ResponseCreateTask,
         crate::controllers::schema::ResponseDeleteTaskByIdForUser,
         crate::controllers::schema::ResponseDeleteAllTasksForUser,
+        crate::models::rzd::tasks::Task,
     ))
 )]
 struct OpenAPI;

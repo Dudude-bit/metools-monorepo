@@ -8,6 +8,7 @@ use surrealdb::{
     sql::{Id, Thing},
     Connection, Error, Response, Surreal,
 };
+use utoipa::ToSchema;
 
 #[derive(Debug, Display)]
 pub enum TasksDBError {
@@ -22,13 +23,13 @@ struct NewTask {
     data: Value,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, ToSchema)]
 pub struct Task {
-    pub id: Thing,
+    pub id: Id,
     pub created_at: DateTime<Utc>,
     pub type_: String,
     pub data: Value,
-    pub user_id: Thing,
+    pub user_id: Id,
 }
 
 const TABLE_NAME: &str = "rzd_tasks";

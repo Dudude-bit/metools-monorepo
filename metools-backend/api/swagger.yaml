@@ -394,3 +394,22 @@ components:
           type: string
         username:
           type: string
+    Task:
+      type: object
+      required:
+      - id
+      - created_at
+      - type_
+      - data
+      - user_id
+      properties:
+        created_at:
+          type: string
+          format: date-time
+        data: {}
+        id:
+          $ref: '#/components/schemas/Id'
+        type_:
+          type: string
+        user_id:
+          $ref: '#/components/schemas/Id'
