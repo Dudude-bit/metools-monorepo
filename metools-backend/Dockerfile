@@ -18,7 +18,7 @@ COPY ./src ./src
 # build for release
 RUN rm ./target/release/deps/metools_backend*
 
-COPY ./migrations ./migrations
+COPY ./migration ./migration
 RUN cargo build --release
 
 # our final base
