@@ -27,6 +27,6 @@ RUN apt-get update && apt-get install -y libssl-dev ca-certificates libcrypto++-
 WORKDIR /app
 COPY --from=build /metools_backend/target/release/metools_backend .
 COPY ./migration ./migration
-
+COPY .surrealdb .surrealdb
 # set the startup command to run your binary
 CMD ["./metools_backend"]
