@@ -1,12 +1,16 @@
-use std::collections::HashMap;
-
 use chrono::{DateTime, Utc};
 use derive_more::Display;
 use serde::{Deserialize, Serialize};
-use surrealdb::{sql::Id, Connection, Error, Response, Surreal};
+use serde_json::json;
+use surrealdb::{
+    sql::{Datetime, Thing, Uuid as DBUuid},
+    Connection, Error, Response, Surreal,
+};
 use uuid::Uuid;
 
-const TABLE_NAME: &str = "rzd_tasks";
+use super::generic::Record;
+
+const TABLE_NAME: &str = "verify_tokens";
 
 #[derive(Debug, Display)]
 pub enum VerifyTokensDBError {
@@ -16,33 +20,33 @@ pub enum VerifyTokensDBError {
 
 #[derive(Serialize)]
 pub struct NewVerifyToken {
-    pub valid_until: DateTime<Utc>,
-    pub token: Uuid,
-    pub user_id: String,
+    pub valid_until: Datetime,
+    pub token: DBUuid,
+    pub user: Thing,
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize, Clone, Debug)]
 pub struct VerifyTokenReturn {
-    pub id: String,
-    pub user_id: String,
-    pub created_at: DateTime<Utc>,
-    pub valid_until: DateTime<Utc>,
-    pub token: Uuid,
+    pub id: Thing,
+    pub created_at: Datetime,
+    pub user: Thing,
+    pub valid_until: Datetime,
+    pub token: DBUuid,
 }
 
 pub async fn create_verify_token<T: Connection>(
     conn: &Surreal<T>,
     token: Uuid,
     valid_until: DateTime<Utc>,
-    user_id: String,
+    user_id: Thing,
 ) -> Result<VerifyTokenReturn, VerifyTokensDBError> {
     let verify_token = NewVerifyToken {
-        token,
-        valid_until,
-        user_id,
+        token: DBUuid::from(token),
+        valid_until: Datetime::from(valid_until),
+        user: user_id,
     };
     let r: Result<Vec<VerifyTokenReturn>, Error> =
-        conn.insert(TABLE_NAME).content(verify_token).await;
+        conn.create(TABLE_NAME).content(verify_token).await;
 
     match r {
         Ok(verify_tokens) => Ok(verify_tokens[0].clone()),
@@ -52,9 +56,13 @@ pub async fn create_verify_token<T: Connection>(
 
 pub async fn get_verify_token_by_value<T: Connection>(
     conn: &Surreal<T>,
-    token: String,
+    token: Uuid,
 ) -> Result<VerifyTokenReturn, VerifyTokensDBError> {
-    let r: Result<Response, Error> = conn.query("SELECT id, user_id, created_at, valid_until, token FROM type::table($table) WHERE token = $token AND valid_until > $valid_until").bind((("table", TABLE_NAME), ("token", token), ("valid_until", chrono::Utc::now()))).await;
+    let r: Result<Response, Error> = conn.query("SELECT id, user_id, created_at, valid_until, token, user FROM type::table($table) WHERE token = <uuid>$token_value AND valid_until > <datetime>$valid_until").bind(json!({
+        "table": TABLE_NAME,
+        "token_value": DBUuid::from(token),
+        "valid_until": Datetime::from(chrono::Utc::now())
+    })).await;
     match r {
         Ok(mut verify_token) => {
             let verify_token_take = verify_token.take::<Vec<VerifyTokenReturn>>(0);
@@ -76,14 +84,12 @@ pub async fn get_verify_token_by_value<T: Connection>(
 
 pub async fn delete_verify_token_by_id<T: Connection>(
     conn: &Surreal<T>,
-    verify_token_id: String,
+    verify_token_id: Thing,
 ) -> Result<(), VerifyTokensDBError> {
-    let r = conn.query("SELECT count() as deleted_verify_tokens FROM (DELETE type::table($table) WHERE id = $verify_token_id RETURN BEFORE)").bind((("table", TABLE_NAME), ("verify_token_id", verify_token_id))).await;
+    let r = conn.delete::<Option<Record>>(verify_token_id).await;
     match r {
-        Ok(mut r) => {
-            let surreal_response = r.take::<Vec<HashMap<String, usize>>>(0).unwrap()[0].clone();
-            let num_deleted_tasks = *surreal_response.get("deleted_verify_tokens").unwrap();
-            if num_deleted_tasks == 0 {
+        Ok(r) => {
+            if r.is_none() {
                 return Err(VerifyTokensDBError::VerifyTokenNotFound);
             }
             Ok(())
@@ -96,13 +102,18 @@ pub async fn delete_expired_verify_tokens<T: Connection>(
     conn: Surreal<T>,
 ) -> Result<usize, VerifyTokensDBError> {
     let r: Result<Response, Error> = conn
-        .query("SELECT count() as deleted_verify_tokens FROM (DELETE type::table($table) WHERE valid_until <= $valid_until)")
-        .bind((("table", TABLE_NAME), ("valid_until", chrono::Utc::now())))
+        .query("count(DELETE type::table($table) WHERE valid_until <= <datetime>$valid_until RETURN BEFORE)")
+        .bind(json!(
+            {
+                "table": TABLE_NAME,
+                "valid_until": Datetime::from(chrono::Utc::now())
+            }
+        ))
         .await;
     match r {
         Ok(mut r) => {
-            let surreal_response = r.take::<Vec<HashMap<String, usize>>>(0).unwrap()[0].clone();
-            Ok(*surreal_response.get("deleted_verify_tokens").unwrap())
+            let surreal_response = r.take::<Vec<usize>>(0).unwrap()[0];
+            Ok(surreal_response)
         }
         Err(err) => Err(VerifyTokensDBError::UnknownError(err)),
     }

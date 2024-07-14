@@ -1,20 +1,17 @@
 version: "3.1"
 
 services:
-  pg:
-    image: postgres:16
+  db:
+    image: surrealdb/surrealdb
+    user: root
     ports:
-      - 5432:5432
-    environment:
-      - POSTGRES_DB=metools
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
+      - "8080:8080"
     volumes:
-      - pg_data:/var/lib/postgresql/data
-    networks:
-      - main_network
+      - db-data:/data/
+    command: "start -A --log trace --auth --user root --pass root --bind 0.0.0.0:8080 file://data/db.db"
+    restart: on-failure
 
 volumes:
-  pg_data:
+  db-data:
 networks:
   main_network:

@@ -9,8 +9,8 @@ use derive_more::Display;
 use jsonwebtoken::{encode, EncodingKey, Header};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use surrealdb::sql::Id;
 use utoipa::ToSchema;
+use uuid::Uuid;
 use validator::{Validate, ValidationErrors};
 
 use crate::{
@@ -20,6 +20,7 @@ use crate::{
     },
     models::verify_tokens::VerifyTokensDBError,
     services::users::UsersServiceError,
+    utils::string::encode_thing_to_base64_string,
 };
 
 #[derive(Deserialize, Validate, ToSchema)]
@@ -42,7 +43,7 @@ pub struct LoginData {
 
 #[derive(Deserialize)]
 pub struct VerifyData {
-    pub verify_key: String,
+    pub verify_key: Uuid,
     pub redirect: String,
 }
 
@@ -195,7 +196,7 @@ pub async fn verify_user(
     query_data: web::Query<VerifyData>,
     state: web::Data<AppState>,
 ) -> Result<web::Redirect, UsersError> {
-    let verify_key = query_data.verify_key.clone();
+    let verify_key = query_data.verify_key;
     let r = state.users_service.verify_user(verify_key).await;
 
     match r {
@@ -218,8 +219,7 @@ pub async fn login(
 ) -> Result<web::Json<ResponseLogin>, UsersError> {
     match data.validate() {
         Ok(_) => {
-            let inner_state = state.clone();
-            let r = inner_state
+            let r = state
                 .users_service
                 .authenticate_user(data.username.clone(), data.password.clone())
                 .await;
@@ -231,7 +231,7 @@ pub async fn login(
                     let exp =
                         (now + Duration::minutes(state.jwt_maxage as i64)).timestamp() as usize;
                     let claims: TokenClaims = TokenClaims {
-                        sub: user.id.to_string(),
+                        sub: encode_thing_to_base64_string(user.id),
                         exp,
                         iat,
                     };

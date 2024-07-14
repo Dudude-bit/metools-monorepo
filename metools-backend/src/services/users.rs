@@ -1,12 +1,10 @@
-use std::ops::Deref;
-
 use argon2::{
     password_hash::SaltString, Argon2, PasswordHash, PasswordHasher as _, PasswordVerifier as _,
 };
 use chrono::Days;
 use derive_more::Display;
 use rand_core::OsRng;
-use surrealdb::{sql::Id, Error};
+use surrealdb::{sql::Thing, Error};
 use uuid::Uuid;
 
 use crate::{
@@ -54,22 +52,17 @@ impl UsersService {
         let hashed_password = Argon2::default().hash_password(password.as_bytes(), &salt);
         match hashed_password {
             Ok(hashed_password) => {
-                let transaction = self.db.get_connection().await.transaction().await.unwrap();
-                let r_user = insert_new_user(
-                    transaction.deref(),
-                    username,
-                    email.clone(),
-                    hashed_password.to_string(),
-                )
-                .await;
+                let conn = self.db.get_connection().await;
+                let r_user =
+                    insert_new_user(&conn, username, email.clone(), hashed_password.to_string())
+                        .await;
                 if r_user.is_err() {
-                    let _ = transaction.cancel().await;
                     return Err(UsersServiceError::UsersDBError(r_user.err().unwrap()));
                 }
                 let r_user = r_user.unwrap();
 
                 let r_verify_token = create_verify_token(
-                    transaction.deref(),
+                    &conn,
                     Uuid::new_v4(),
                     chrono::offset::Utc::now()
                         .checked_add_days(Days::new(1)) // verify token valid for 1 day
@@ -79,7 +72,6 @@ impl UsersService {
                 .await;
 
                 if r_verify_token.is_err() {
-                    let _ = transaction.cancel().await;
                     return Err(UsersServiceError::VerifyTokensDBError(
                         r_verify_token.err().unwrap(),
                     ));
@@ -89,19 +81,10 @@ impl UsersService {
 
                 let r_email = self
                     .mailer
-                    .send_verification_mail(email, r_verify_token.token);
+                    .send_verification_mail(email, r_verify_token.token.0);
                 match r_email {
-                    Ok(_) => {
-                        let commit_result = transaction.commit().await;
-                        if commit_result.is_err() {
-                            return Err(UsersServiceError::CommitError(
-                                commit_result.err().unwrap(),
-                            ));
-                        }
-                        Ok(r_user)
-                    }
+                    Ok(_) => Ok(r_user),
                     Err(err) => {
-                        let _ = transaction.cancel().await;
                         log::error!("Error on sending email: {err}");
                         Err(UsersServiceError::UnknownError)
                     }
@@ -136,7 +119,7 @@ impl UsersService {
         }
     }
 
-    pub async fn get_user_by_id(&self, user_id: String) -> Result<UserReturn, UsersServiceError> {
+    pub async fn get_user_by_id(&self, user_id: Thing) -> Result<UserReturn, UsersServiceError> {
         let r = get_user_by_id(self.db.get_connection().await, user_id).await;
 
         match r {
@@ -144,44 +127,32 @@ impl UsersService {
             Err(err) => Err(UsersServiceError::UsersDBError(err)),
         }
     }
-    pub async fn verify_user(&self, token: String) -> Result<(), UsersServiceError> {
-        let transaction = self.db.get_connection().await.transaction().await.unwrap();
-        let verify_token = get_verify_token_by_value(transaction.deref(), token).await;
+    pub async fn verify_user(&self, token: Uuid) -> Result<(), UsersServiceError> {
+        let conn = self.db.get_connection().await;
+        let verify_token = get_verify_token_by_value(&conn, token).await;
         if verify_token.is_err() {
-            let _ = transaction.cancel().await;
             return Err(UsersServiceError::VerifyTokensDBError(
                 verify_token.err().unwrap(),
             ));
         }
         let verify_token = verify_token.unwrap();
 
-        let r_set_user_verified =
-            set_user_verified(transaction.deref(), verify_token.user_id).await;
+        let r_set_user_verified = set_user_verified(&conn, verify_token.user).await;
         if r_set_user_verified.is_err() {
-            let _ = transaction.cancel().await;
             return Err(UsersServiceError::UsersDBError(
                 r_set_user_verified.err().unwrap(),
             ));
         }
 
-        let r = delete_verify_token_by_id(transaction.deref(), verify_token.id).await;
+        let r = delete_verify_token_by_id(&conn, verify_token.id).await;
 
         match r {
-            Ok(()) => {
-                let commit_result = transaction.commit().await;
-                if commit_result.is_err() {
-                    return Err(UsersServiceError::CommitError(commit_result.err().unwrap()));
-                }
-                Ok(())
-            }
-            Err(err) => {
-                let _ = transaction.cancel().await;
-                Err(UsersServiceError::VerifyTokensDBError(err))
-            }
+            Ok(()) => Ok(()),
+            Err(err) => Err(UsersServiceError::VerifyTokensDBError(err)),
         }
     }
 
-    pub async fn get_user_is_verified(&self, user_id: String) -> Result<bool, UsersServiceError> {
+    pub async fn get_user_is_verified(&self, user_id: Thing) -> Result<bool, UsersServiceError> {
         let r = is_user_verified(self.db.get_connection().await, user_id).await;
 
         match r {

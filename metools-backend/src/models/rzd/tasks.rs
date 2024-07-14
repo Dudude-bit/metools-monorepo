@@ -1,11 +1,10 @@
 use std::collections::HashMap;
 
-use chrono::{DateTime, Utc};
 use derive_more::Display;
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::json;
 use surrealdb::{
-    sql::{Id, Thing},
+    sql::{Datetime, Thing},
     Connection, Error, Response, Surreal,
 };
 use utoipa::ToSchema;
@@ -18,35 +17,37 @@ pub enum TasksDBError {
 
 #[derive(Serialize)]
 struct NewTask {
-    user_id: String,
+    user: Thing,
+    #[serde(rename = "type")]
     type_: String,
-    data: Value,
+    data: HashMap<String, String>,
 }
 
-#[derive(Serialize, Deserialize, Clone, ToSchema)]
+#[derive(Serialize, Deserialize, Clone, ToSchema, Debug)]
 pub struct Task {
-    pub id: String,
-    pub created_at: DateTime<Utc>,
+    pub id: Thing,
+    pub created_at: Datetime,
+    #[serde(rename = "type")]
     pub type_: String,
-    pub data: Value,
-    pub user_id: String,
+    pub data: HashMap<String, String>,
+    pub user: Thing,
 }
 
 const TABLE_NAME: &str = "rzd_tasks";
 
 pub async fn insert_new_task<T: Connection>(
     conn: Surreal<T>,
-    task_user_id: String,
-    task_type: String,
+    user_id: Thing,
+    type_: String,
     task_data: HashMap<String, String>,
 ) -> Result<Task, TasksDBError> {
     let new_task = NewTask {
-        user_id: task_user_id,
-        type_: task_type,
-        data: json!(task_data),
+        user: user_id,
+        type_,
+        data: task_data,
     };
 
-    let r: Result<Vec<Task>, Error> = conn.insert(TABLE_NAME).content(new_task).await;
+    let r: Result<Vec<Task>, Error> = conn.create(TABLE_NAME).content(new_task).await;
 
     match r {
         Ok(tasks) => Ok(tasks[0].clone()),
@@ -65,9 +66,16 @@ pub async fn list_all_tasks<T: Connection>(conn: Surreal<T>) -> Result<Vec<Task>
 
 pub async fn list_all_users_tasks<T: Connection>(
     conn: Surreal<T>,
-    user_id: String,
+    user_id: Thing,
 ) -> Result<Vec<Task>, TasksDBError> {
-    let r: Result<Response, Error> = conn.query("SELECT id, created_at, type_, data, user_id FROM type::table($table) WHERE user_id = $user_id").bind((("table", TABLE_NAME), ("user_id", user_id))).await;
+    let r: Result<Response, Error> = conn.query("SELECT id, created_at, type, data, user FROM type::table($table) WHERE user = <record>$user_id").bind(
+        json!(
+            {
+                "table": TABLE_NAME,
+                "user_id":  user_id.to_string()
+            }
+        )
+    ).await;
 
     match r {
         Ok(mut tasks) => Ok(tasks.take::<Vec<Task>>(0).unwrap().clone()),
@@ -77,14 +85,21 @@ pub async fn list_all_users_tasks<T: Connection>(
 
 pub async fn delete_task_by_id_for_user<T: Connection>(
     conn: Surreal<T>,
-    user_id: String,
-    task_id: String,
+    user_id: Thing,
+    task_id: Thing,
 ) -> Result<(), TasksDBError> {
-    let r = conn.query("SELECT count() as deleted_tasks FROM (DELETE type::table($table) WHERE user_id = $user_id AND id = $task_id RETURN BEFORE)").bind((("table", TABLE_NAME), ("user_id", user_id), ("task_id", task_id))).await;
+    let r = conn.query("count(DELETE type::table($table) WHERE user = <record>$user_id AND id = <record>$task_id RETURN BEFORE)").bind(
+        json!(
+            {
+                "table": TABLE_NAME,
+                "user_id": user_id.to_string(),
+                "task_id": task_id.to_string()
+            }
+        )
+    ).await;
     match r {
         Ok(mut r) => {
-            let surreal_response = r.take::<Vec<HashMap<String, usize>>>(0).unwrap()[0].clone();
-            let num_deleted_tasks = *surreal_response.get("deleted_tasks").unwrap();
+            let num_deleted_tasks = r.take::<Vec<usize>>(0).unwrap()[0];
             if num_deleted_tasks == 0 {
                 return Err(TasksDBError::NoDeletedTask);
             }
@@ -96,16 +111,21 @@ pub async fn delete_task_by_id_for_user<T: Connection>(
 
 pub async fn delete_all_tasks_for_user<T: Connection>(
     conn: Surreal<T>,
-    user_id: String,
+    user_id: Thing,
 ) -> Result<usize, TasksDBError> {
     let r = conn
-        .query("SELECT count() as deleted_tasks FROM (DELETE type::table($table) WHERE user_id = $user_id RETURN BEFORE)")
-        .bind((("table", TABLE_NAME), ("user_id", user_id)))
+        .query("count(DELETE type::table($table) WHERE user = <record>$user_id RETURN BEFORE)")
+        .bind(json!(
+            {
+                "table": TABLE_NAME,
+                "user_id": user_id.to_string()
+            }
+        ))
         .await;
     match r {
         Ok(mut r) => {
-            let surreal_response = r.take::<Vec<HashMap<String, usize>>>(0).unwrap()[0].clone();
-            Ok(*surreal_response.get("deleted_tasks").unwrap())
+            let surreal_response = r.take::<Vec<usize>>(0).unwrap()[0];
+            Ok(surreal_response)
         }
         Err(err) => Err(TasksDBError::UnknownError(err)),
     }

@@ -1,8 +1,14 @@
 use derive_more::Display;
 use serde::{Deserialize, Serialize};
-use surrealdb::{opt::PatchOp, sql::Id, Connection, Error, Response, Surreal};
+use serde_json::json;
+use surrealdb::{
+    opt::PatchOp,
+    sql::{Datetime, Thing},
+    Connection, Error, Response, Surreal,
+};
+use utoipa::ToSchema;
 
-const TABLE_NAME: &str = "rzd_tasks";
+const TABLE_NAME: &str = "users";
 
 #[derive(Debug, Display)]
 pub enum UsersDBError {
@@ -10,9 +16,10 @@ pub enum UsersDBError {
     UnknownError(Error),
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, ToSchema)]
 pub struct UserReturn {
-    pub id: String,
+    pub id: Thing,
+    pub created_at: Datetime,
     pub username: String,
     pub is_verified: bool,
     pub email: String,
@@ -38,8 +45,7 @@ pub async fn insert_new_user<T: Connection>(
         email: user_email,
         password: user_password,
     };
-
-    let r: Result<Vec<UserReturn>, Error> = conn.insert(TABLE_NAME).content(new_user).await;
+    let r: Result<Vec<UserReturn>, Error> = conn.create(TABLE_NAME).content(new_user).await;
 
     match r {
         Ok(users) => Ok(users[0].clone()),
@@ -52,8 +58,13 @@ pub async fn get_user_by_username<T: Connection>(
     username: String,
 ) -> Result<UserReturn, UsersDBError> {
     let r: Result<Response, Error> = conn
-        .query("SELECT username, is_verified, email, role, password FROM type::table($table) WHERE username = $username")
-        .bind((("table", TABLE_NAME), ("username", username)))
+        .query("SELECT id, username, is_verified, email, role, password FROM type::table($table) WHERE username = $username")
+        .bind(json!(
+            {
+                "table": TABLE_NAME,
+                "username": username
+            }
+        ))
         .await;
 
     match r {
@@ -73,9 +84,9 @@ pub async fn get_user_by_username<T: Connection>(
 
 pub async fn get_user_by_id<T: Connection>(
     conn: Surreal<T>,
-    user_id: String,
+    user_thing: Thing,
 ) -> Result<UserReturn, UsersDBError> {
-    let r: Result<Option<UserReturn>, Error> = conn.select((TABLE_NAME, user_id)).await;
+    let r: Result<Option<UserReturn>, Error> = conn.select(user_thing).await;
 
     match r {
         Ok(user_option) => match user_option {
@@ -88,7 +99,7 @@ pub async fn get_user_by_id<T: Connection>(
 
 pub async fn is_user_verified<T: Connection>(
     conn: Surreal<T>,
-    user_id: String,
+    user_id: Thing,
 ) -> Result<bool, UsersDBError> {
     match get_user_by_id(conn, user_id).await {
         Ok(user) => Ok(user.is_verified),
@@ -98,10 +109,10 @@ pub async fn is_user_verified<T: Connection>(
 
 pub async fn set_user_verified<T: Connection>(
     conn: &Surreal<T>,
-    user_id: String,
+    user_id: Thing,
 ) -> Result<(), UsersDBError> {
     let r: Result<Option<UserReturn>, Error> = conn
-        .update((TABLE_NAME, user_id))
+        .update(user_id)
         .patch(PatchOp::replace("/is_verified", true))
         .await;
 

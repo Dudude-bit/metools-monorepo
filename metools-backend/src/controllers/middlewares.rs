@@ -7,12 +7,15 @@ use actix_web::{
 };
 use jsonwebtoken::{decode, DecodingKey, Validation};
 use serde_json::json;
-use surrealdb::sql::Id;
+use surrealdb::sql::Thing;
 
-use crate::controllers::{schema::AppState, users::users::TokenClaims};
+use crate::{
+    controllers::{schema::AppState, users::users::TokenClaims},
+    utils::string::decode_from_base64_to_thing,
+};
 
 pub struct UserMiddleware {
-    pub user_id: String,
+    pub user_id: Thing,
 }
 
 impl FromRequest for UserMiddleware {
@@ -50,7 +53,7 @@ impl FromRequest for UserMiddleware {
                 }
             };
 
-            let user_id = claims.sub.to_string();
+            let user_id: Thing = decode_from_base64_to_thing(claims.sub);
             let is_user_verified = data
                 .users_service
                 .get_user_is_verified(user_id.clone())

@@ -19,7 +19,6 @@ use controllers::rzd::tasks::{
 use lettre::{transport::smtp::authentication::Credentials, SmtpTransport};
 use models::verify_tokens::delete_expired_verify_tokens;
 use services::{mailer::MailerService, tasks::TasksService};
-use surrealdb::{engine::any::connect, opt::auth::Root};
 use surrealdb_migrations::MigrationRunner;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
@@ -57,6 +56,7 @@ use crate::{
         crate::controllers::schema::ResponseDeleteTaskByIdForUser,
         crate::controllers::schema::ResponseDeleteAllTasksForUser,
         crate::models::rzd::tasks::Task,
+        crate::models::users::UserReturn
     ))
 )]
 struct OpenAPI;
@@ -66,19 +66,7 @@ async fn health() -> HttpResponse {
 }
 
 async fn run_migrations(config: &Config) {
-    let db = connect(config.db.surrealdb_url.clone())
-        .await
-        .expect("cant connect to surrealdb");
-    db.signin(Root {
-        username: config.db.surrealdb_username.as_str(),
-        password: config.db.surrealdb_password.as_str(),
-    })
-    .await
-    .expect("cant auth in surrealdb");
-    db.use_ns(config.db.surrealdb_ns.clone())
-        .use_db(config.db.surrealdb_db.clone())
-        .await
-        .expect("cant use ns and db");
+    let db = config.db.get_connection().await;
 
     MigrationRunner::new(&db)
         .up()

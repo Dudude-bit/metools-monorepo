@@ -28,7 +28,7 @@ impl DBConfig {
         .await
         .unwrap();
         db.use_ns(self.surrealdb_ns.as_str())
-            .use_db(self.surrealdb_password.as_str())
+            .use_db(self.surrealdb_db.as_str())
             .await
             .unwrap();
 
@@ -56,8 +56,7 @@ impl Config {
         let http_address = env::var("HTTP_ADDRESS").unwrap_or(String::from("0.0.0.0:8000"));
         let service_url =
             env::var("SERVICE_URL").unwrap_or(format!("http://{}", http_address.clone()));
-        let surrealdb_url =
-            env::var("SURREALDB_URL").unwrap_or(String::from("ws://localhost:8000"));
+        let surrealdb_url = env::var("SURREALDB_URL").unwrap_or(String::from("localhost:8080"));
         let surrealdb_username = env::var("SURREALDB_USERNAME").unwrap_or(String::from("root"));
         let surrealdb_password = env::var("SURREALDB_PASSWORD").unwrap_or(String::from("root"));
         let surrealdb_ns = env::var("SURREALDB_NS").unwrap_or(String::from("ns"));

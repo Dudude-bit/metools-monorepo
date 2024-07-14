@@ -9,7 +9,6 @@ use actix_web::{
 use derive_more::Display;
 use serde::Deserialize;
 use serde_json::json;
-use surrealdb::sql::Id;
 use utoipa::ToSchema;
 use validator::{Validate, ValidateArgs, ValidationError, ValidationErrors};
 
@@ -20,6 +19,7 @@ use crate::{
     },
     models::rzd::tasks::TasksDBError,
     services::tasks::TasksServiceError,
+    utils::thing::Base64EncodedThing,
 };
 
 #[derive(Debug, Display)]
@@ -123,9 +123,9 @@ pub struct CreateTaskData {
     data: HashMap<String, String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 struct DeleteTaskData {
-    task_id: String,
+    task_id: Base64EncodedThing,
 }
 
 #[utoipa::path(
@@ -211,7 +211,7 @@ pub async fn delete_task_by_id_for_user(
 
     let r = state
         .tasks_service
-        .delete_task_by_id_for_user(user_id, data.task_id.clone())
+        .delete_task_by_id_for_user(user_id, data.task_id.0.clone())
         .await;
 
     match r {

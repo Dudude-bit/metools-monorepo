@@ -1,4 +1,3 @@
-DATABASE_URL ?= postgres://postgres:postgres@localhost:5432/metools
 JWT_SECRET ?= 123
 JWT_MAXAGE ?= 6000
 
@@ -16,5 +15,6 @@ run:
 .PHONY: run-release
 run-release:
 	@DATABASE_URL=${DATABASE_URL} JWT_SECRET=${JWT_SECRET} JWT_MAXAGE=${JWT_MAXAGE} cargo run --release
+.PHONY: run-db
 run-db:
-	@docker compose -f docker-compose.yaml up pg
+	@docker compose -f docker-compose.yaml up db

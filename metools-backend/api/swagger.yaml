@@ -408,8 +408,30 @@ components:
           format: date-time
         data: {}
         id:
-          $ref: '#/components/schemas/Id'
+          $ref: '#/components/schemas/Thing'
         type_:
           type: string
         user_id:
-          $ref: '#/components/schemas/Id'
+          $ref: '#/components/schemas/Thing'
+    UserReturn:
+      type: object
+      required:
+      - id
+      - username
+      - is_verified
+      - email
+      - role
+      - password
+      properties:
+        email:
+          type: string
+        id:
+          $ref: '#/components/schemas/Thing'
+        is_verified:
+          type: boolean
+        password:
+          type: string
+        role:
+          type: string
+        username:
+          type: string

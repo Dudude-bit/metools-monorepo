@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use derive_more::Display;
-use surrealdb::sql::Id;
+use surrealdb::sql::Thing;
 
 use crate::{
     config::DBConfig,
@@ -27,7 +27,7 @@ impl TasksService {
     }
     pub async fn list_tasks_for_user(
         &self,
-        user_id: String,
+        user_id: Thing,
     ) -> Result<Vec<Task>, TasksServiceError> {
         let tasks = list_all_users_tasks(self.db.get_connection().await, user_id).await;
         match tasks {
@@ -38,7 +38,7 @@ impl TasksService {
 
     pub async fn create_task_for_user(
         &self,
-        user_id: String,
+        user_id: Thing,
         task_type: String,
         task_data: HashMap<String, String>,
     ) -> Result<Task, TasksServiceError> {
@@ -58,8 +58,8 @@ impl TasksService {
 
     pub async fn delete_task_by_id_for_user(
         &self,
-        user_id: String,
-        task_id: String,
+        user_id: Thing,
+        task_id: Thing,
     ) -> Result<(), TasksServiceError> {
         let r = delete_task_by_id_for_user(self.db.get_connection().await, user_id, task_id).await;
 
@@ -71,7 +71,7 @@ impl TasksService {
 
     pub async fn delete_all_tasks_for_user(
         &self,
-        user_id: String,
+        user_id: Thing,
     ) -> Result<usize, TasksServiceError> {
         let r = delete_all_tasks_for_user(self.db.get_connection().await, user_id).await;
 
