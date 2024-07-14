@@ -58,7 +58,7 @@ pub async fn get_user_by_username<T: Connection>(
     username: String,
 ) -> Result<UserReturn, UsersDBError> {
     let r: Result<Response, Error> = conn
-        .query("SELECT id, username, is_verified, email, role, password FROM type::table($table) WHERE username = $username")
+        .query("SELECT id, created_at, username, is_verified, email, role, password FROM type::table($table) WHERE username = $username")
         .bind(json!(
             {
                 "table": TABLE_NAME,
