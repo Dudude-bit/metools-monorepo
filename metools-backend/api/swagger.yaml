@@ -260,12 +260,8 @@ paths:
         schema:
           type: string
       responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ResponseLogin'
+        '308':
+          description: Redirect
         '404':
           description: Verify token not found or expired
           content:
@@ -345,7 +341,7 @@ components:
         data:
           type: array
           items:
-            $ref: '#/components/schemas/Task'
+            $ref: '#/components/schemas/ResponseListTasksData'
         status:
           type: string
     ResponseLogin:
@@ -365,17 +361,17 @@ components:
       - data
       properties:
         data:
-          $ref: '#/components/schemas/UserReturn'
+          $ref: '#/components/schemas/ResponseMeData'
         status:
           type: string
-    ResponseSignUp:
+    ResponseSignup:
       type: object
       required:
       - status
       - data
       properties:
         data:
-          $ref: '#/components/schemas/UserReturn'
+          $ref: '#/components/schemas/ResponseSignupData'
         status:
           type: string
     SignUpData:
@@ -399,30 +395,35 @@ components:
       required:
       - id
       - created_at
-      - type_
+      - type
       - data
-      - user_id
+      - user
       properties:
         created_at:
-          type: string
-          format: date-time
-        data: {}
+          $ref: '#/components/schemas/Datetime'
+        data:
+          type: object
+          additionalProperties:
+            type: string
         id:
           $ref: '#/components/schemas/Thing'
-        type_:
+        type:
           type: string
-        user_id:
+        user:
           $ref: '#/components/schemas/Thing'
     UserReturn:
       type: object
       required:
       - id
+      - created_at
       - username
       - is_verified
       - email
       - role
       - password
       properties:
+        created_at:
+          $ref: '#/components/schemas/Datetime'
         email:
           type: string
         id:

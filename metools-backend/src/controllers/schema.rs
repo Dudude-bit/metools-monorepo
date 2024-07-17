@@ -2,7 +2,11 @@ use serde::Serialize;
 use utoipa::ToSchema;
 
 use crate::{
-    models::{rzd::tasks::Task, users::UserReturn},
+    controllers::{
+        rzd::tasks::ResponseListTasksData,
+        users::users::{ResponseMeData, ResponseSignupData},
+    },
+    models::rzd::tasks::Task,
     services::{tasks::TasksService, users::UsersService},
 };
 
@@ -15,10 +19,10 @@ pub struct AppState {
 }
 
 #[derive(Serialize, ToSchema)]
-#[aliases(ResponseMe = Response<UserReturn>,
+#[aliases(ResponseMe = Response<ResponseMeData>,
     ResponseLogin = Response<String>,
-    ResponseSignUp = Response<UserReturn>,
-    ResponseListTasks = Response<Vec<Task>>,
+    ResponseSignup = Response<ResponseSignupData>,
+    ResponseListTasks = Response<Vec<ResponseListTasksData>>,
     ResponseCreateTask = Response<Task>,
     ResponseDeleteTaskByIdForUser = Response<String>,
     ResponseDeleteAllTasksForUser = Response<String>)]

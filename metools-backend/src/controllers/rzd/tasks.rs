@@ -6,8 +6,9 @@ use actix_web::{
     http::{header::ContentType, StatusCode},
     post, web, HttpResponse, ResponseError,
 };
+use chrono::{DateTime, Utc};
 use derive_more::Display;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 use utoipa::ToSchema;
 use validator::{Validate, ValidateArgs, ValidationError, ValidationErrors};
@@ -17,7 +18,7 @@ use crate::{
         middlewares::UserMiddleware,
         schema::{AppState, ResponseCreateTask, ResponseDeleteTaskByIdForUser, ResponseListTasks},
     },
-    models::rzd::tasks::TasksDBError,
+    models::rzd::tasks::{Task, TasksDBError},
     services::tasks::TasksServiceError,
     utils::thing::Base64EncodedThing,
 };
@@ -128,6 +129,34 @@ struct DeleteTaskData {
     task_id: Base64EncodedThing,
 }
 
+#[derive(Serialize)]
+pub struct ResponseListTasksData {
+    pub created_at: DateTime<Utc>,
+    #[serde(rename = "type")]
+    pub type_: String,
+    pub data: HashMap<String, String>,
+    pub user: Base64EncodedThing,
+}
+
+struct VecTask(Vec<Task>);
+struct VecResponseListTasksData(Vec<ResponseListTasksData>);
+
+impl From<VecTask> for VecResponseListTasksData {
+    fn from(value: VecTask) -> Self {
+        let mut r: VecResponseListTasksData = VecResponseListTasksData(Vec::new());
+
+        for task in value.0 {
+            r.0.push(ResponseListTasksData {
+                created_at: task.created_at.to_utc(),
+                type_: task.type_,
+                data: task.data,
+                user: Base64EncodedThing(task.user),
+            })
+        }
+        r
+    }
+}
+
 #[utoipa::path(
     params(("X-API-AUTH-TOKEN" = Uuid, Header, description = "Auth token"),),
     responses(
@@ -149,7 +178,10 @@ pub async fn list_tasks(
     match r {
         Ok(tasks) => Ok(web::Json(ResponseListTasks {
             status: "success".to_string(),
-            data: tasks,
+            data: {
+                let r: VecResponseListTasksData = VecTask(tasks).into();
+                r.0
+            },
         })),
         Err(err) => Err(TasksError::TasksServiceError(err)),
     }

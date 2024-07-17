@@ -4,7 +4,7 @@ use actix_web::{
     http::{header::ContentType, StatusCode},
     post, web, HttpResponse, ResponseError,
 };
-use chrono::{Duration, Utc};
+use chrono::{DateTime, Duration, Utc};
 use derive_more::Display;
 use jsonwebtoken::{encode, EncodingKey, Header};
 use serde::{Deserialize, Serialize};
@@ -16,9 +16,9 @@ use validator::{Validate, ValidationErrors};
 use crate::{
     controllers::{
         middlewares::UserMiddleware,
-        schema::{AppState, ResponseLogin, ResponseMe, ResponseSignUp},
+        schema::{AppState, ResponseLogin, ResponseMe, ResponseSignup},
     },
-    models::verify_tokens::VerifyTokensDBError,
+    models::{users::UserReturn, verify_tokens::VerifyTokensDBError},
     services::users::UsersServiceError,
     utils::string::encode_thing_to_base64_string,
 };
@@ -123,6 +123,23 @@ impl ResponseError for UsersError {
     }
 }
 
+#[derive(Serialize)]
+pub struct ResponseMeData {
+    pub created_at: DateTime<Utc>,
+    pub username: String,
+    pub email: String,
+}
+
+impl From<UserReturn> for ResponseMeData {
+    fn from(value: UserReturn) -> Self {
+        Self {
+            created_at: value.created_at.to_utc(),
+            username: value.username,
+            email: value.email,
+        }
+    }
+}
+
 #[utoipa::path(
     params(("X-API-AUTH-TOKEN" = Uuid, Header, description = "Auth token"),),
     responses(
@@ -143,9 +160,26 @@ pub async fn me(
     match r {
         Ok(user) => Ok(web::Json(ResponseMe {
             status: "success".to_string(),
-            data: user,
+            data: user.into(),
         })),
         Err(err) => Err(UsersError::UsersServiceError(err)),
+    }
+}
+
+#[derive(Serialize)]
+pub struct ResponseSignupData {
+    pub created_at: DateTime<Utc>,
+    pub username: String,
+    pub email: String,
+}
+
+impl From<UserReturn> for ResponseSignupData {
+    fn from(value: UserReturn) -> Self {
+        Self {
+            created_at: value.created_at.to_utc(),
+            username: value.username,
+            email: value.email,
+        }
     }
 }
 
@@ -160,7 +194,7 @@ tag = "users"
 pub async fn signup(
     data: web::Json<SignUpData>,
     state: web::Data<AppState>,
-) -> Result<web::Json<ResponseSignUp>, UsersError> {
+) -> Result<web::Json<ResponseSignup>, UsersError> {
     match data.validate() {
         Ok(_) => {
             let r = state
@@ -172,9 +206,9 @@ pub async fn signup(
                 )
                 .await;
             match r {
-                Ok(user) => Ok(web::Json(ResponseSignUp {
+                Ok(user) => Ok(web::Json(ResponseSignup {
                     status: "success".to_string(),
-                    data: user,
+                    data: user.into(),
                 })),
                 Err(err) => Err(UsersError::UsersServiceError(err)),
             }
@@ -186,7 +220,7 @@ pub async fn signup(
 #[utoipa::path(
 params(("verify_key" = Uuid, Query, description = "Verify token"),("redirect" = String, Query, description = "Redirect link")),
 responses(
-(status = OK, description = "OK", body = ResponseLogin),
+(status = PERMANENT_REDIRECT, description = "Redirect"),
 (status = NOT_FOUND, description = "Verify token not found or expired", body = ErrorResponse)
 ),
 tag = "users")
